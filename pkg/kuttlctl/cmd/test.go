@@ -56,6 +56,7 @@ func newTestCmd() *cobra.Command { //nolint:gocyclo
 	artifactsDir := ""
 	mockControllerFile := ""
 	timeout := 30
+	fullName := false
 	reportFormat := ""
 	reportName := "kuttl-report"
 	namespace := ""
@@ -177,6 +178,10 @@ For more detailed documentation, visit: https://kuttl.dev`,
 				options.ArtifactsDir = artifactsDir
 			}
 
+			if isSet(flags, "full-name") {
+				options.FullName = fullName
+			}
+
 			if isSet(flags, "namespace") {
 				if strings.TrimSpace(namespace) == "" {
 					return errors.New(`setting namespace explicitly to "" or empty string is not supported`)
@@ -257,6 +262,7 @@ For more detailed documentation, visit: https://kuttl.dev`,
 	testCmd.Flags().StringSliceVar(&suppress, "suppress-log", []string{}, "Suppress logging for these kinds of logs (events).")
 	// This cannot be a global flag because pkg/test/utils.RunTests calls flag.Parse which barfs on unknown top-level flags.
 	// Putting it here at least does not advertise it on a level where using it is impossible.
+	testCmd.Flags().BoolVar(&fullName, "full-name", false, "If set, uses the full test case folder path instead of folder name.")
 	test.SetFlags(testCmd.Flags())
 
 	return testCmd
