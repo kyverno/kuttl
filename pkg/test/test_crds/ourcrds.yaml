@@ -31,7 +31,6 @@ spec:
         spec:
           description: OurcrdSpec defines the desired state of Ourcrd.
       type: object
-  version: v1beta1
   versions:
   - name: v1beta1
     served: true

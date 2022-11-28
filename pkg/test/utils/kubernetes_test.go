@@ -258,7 +258,7 @@ spec:
   - name: nginx
     image: nginx:1.7.9
 ---
-apiVersion: apiextensions.k8s.io/v1
+apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
   name: hello
@@ -270,7 +270,7 @@ metadata:
 	objs, err := LoadYAMLFromFile(tmpfile.Name())
 	assert.Nil(t, err)
 
-	crd := NewResource("apiextensions.k8s.io/v1", "CustomResourceDefinition", "", "")
+	crd := NewResource("apiextensions.k8s.io/v1beta1", "CustomResourceDefinition", "", "")
 	pod := NewResource("v1", "Pod", "", "")
 	svc := NewResource("v1", "Service", "", "")
 

@@ -4,7 +4,6 @@ metadata:
   name: prowjobs.prow.example.com
 spec:
   group: prow.example.com
-  version: v1
   names:
     kind: ProwJob
     singular: prowjob
@@ -47,3 +46,7 @@ spec:
     description: The state of the job.
     type: string
     JSONPath: .status.state
+  versions:
+  - name: v1beta1
+    served: true
+    storage: true
