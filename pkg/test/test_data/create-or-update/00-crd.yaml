@@ -47,6 +47,15 @@ spec:
     type: string
     JSONPath: .status.state
   versions:
-  - name: v1beta1
-    served: true
-    storage: true
+    - name: v1beta1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          description: The TestAssert object can be used to specify settings for a test step's assert and must be specified in the test step's assert YAML.
+          type: object
+          properties:
+            timeout:
+              description: Number of seconds that the test is allowed to run for
+              type: integer
+              default: 30
