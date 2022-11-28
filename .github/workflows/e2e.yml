@@ -10,13 +10,11 @@ jobs:
   e2e-tests:
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/setup-go@v2.1.4
+    - uses: actions/setup-go@c4a742cab115ed795e34d4513e2cf7d472deb55f # v3.3.1
       with:
         go-version: 1.18
-    - uses: actions/checkout@v2.4.0
-    - name: "Install etcd"
-      run: ./hack/install-etcd.sh
-    - name: "Install kube-apiserver"
-      run: ./hack/install-kube-apiserver.sh
+    - uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791 # v2.5.0
     - name: "Run E2E tests"
       run: make e2e-test INTEGRATION_OUTPUT_JUNIT="true"
+    - name: "List namespaces"
+      run: kubectl get namespace
