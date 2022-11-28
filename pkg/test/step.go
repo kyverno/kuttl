@@ -204,6 +204,20 @@ func (s *Step) Create(test *testing.T, namespace string) []error {
 				test.Cleanup(func() {
 					if err := cl.Delete(context.TODO(), obj); err != nil && !k8serrors.IsNotFound(err) {
 						test.Error(err)
+					} else {
+						err := wait.PollImmediateUntilWithContext(context.TODO(), time.Second, func(ctx context.Context) (bool, error) {
+							obj := obj.DeepCopyObject()
+							err := cl.Get(context.TODO(), testutils.ObjectKey(obj), obj.(client.Object))
+							if k8serrors.IsNotFound(err) {
+								return true, nil
+							}
+							return false, err
+						})
+						if err != nil {
+							test.Error(err)
+						} else {
+							s.Logger.Log(testutils.ResourceID(obj), "deleted")
+						}
 					}
 				})
 			}
