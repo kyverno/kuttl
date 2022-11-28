@@ -80,13 +80,16 @@ func (t *Case) DeleteNamespace(cl client.Client, ns *namespace) error {
 	}
 
 	if err := cl.Delete(ctx, nsObj); err != nil {
+		if k8serrors.IsNotFound(err) {
+			return nil
+		}
 		return err
 	}
 
-	return wait.PollImmediateUntilWithContext(ctx, 100*time.Millisecond, func(ctx context.Context) (bool, error) {
+	return wait.PollImmediateUntilWithContext(ctx, time.Second, func(ctx context.Context) (bool, error) {
 		actual := &corev1.Namespace{}
 		err := cl.Get(ctx, client.ObjectKey{Name: ns.Name}, actual)
-		fmt.Println(err)
+		fmt.Println(err, ns.Name, actual)
 		if k8serrors.IsNotFound(err) {
 			return true, nil
 		}
