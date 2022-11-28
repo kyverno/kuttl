@@ -9,6 +9,7 @@ kuttl.yaml
 kuttl-report.json
 kuttl-report.xml
 kind-logs-*/
+.tools/
 
 
 ### mac
