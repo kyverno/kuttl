@@ -14,7 +14,7 @@ GOLANGCI_LINT_VER        = "1.50.1"
 TOOLS_DIR                := $(PWD)/.tools
 KIND                     := $(TOOLS_DIR)/kind
 KIND_VERSION             := v0.14.0
-KIND_IMAGE               ?= kindest/node:v1.24.4
+KIND_IMAGE               ?= kindest/node:v1.22.15
 KIND_NAME                ?= kind
 
 export GO111MODULE=on
