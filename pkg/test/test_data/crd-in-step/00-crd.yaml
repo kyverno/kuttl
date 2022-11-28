@@ -19,6 +19,9 @@ spec:
         openAPIV3Schema:
           type: object
           properties:
-            hi:
-              type: string
-              default: "hello"
+            spec:
+              type: object
+              properties:
+                hi:
+                  type: string
+                  default: "hello"
