@@ -20,3 +20,5 @@ jobs:
       run: ./hack/install-kube-apiserver.sh
     - name: "Run E2E tests"
       run: make e2e-test INTEGRATION_OUTPUT_JUNIT="true"
+    - name: "List namespaces"
+      run: kubectl get namespace

@@ -20,3 +20,5 @@ jobs:
       run: ./hack/install-kube-apiserver.sh
     - name: "Run integration tests"
       run: make integration-test INTEGRATION_OUTPUT_JUNIT="true"
+    - name: "List namespaces"
+      run: kubectl get namespace
