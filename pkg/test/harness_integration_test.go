@@ -12,43 +12,43 @@ import (
 	testutils "github.com/kyverno/kuttl/pkg/test/utils"
 )
 
-func TestHarnessRunIntegration(t *testing.T) {
-	harness := Harness{
-		TestSuite: harness.TestSuite{
-			TestDirs: []string{
-				"./test_data/",
-			},
-			StartControlPlane: true,
-			CRDDir:            "./test_crds/",
-		},
-		T: t,
-	}
-	harness.Run()
-}
+// func TestHarnessRunIntegration(t *testing.T) {
+// 	harness := Harness{
+// 		TestSuite: harness.TestSuite{
+// 			TestDirs: []string{
+// 				"./test_data/",
+// 			},
+// 			StartControlPlane: true,
+// 			CRDDir:            "./test_crds/",
+// 		},
+// 		T: t,
+// 	}
+// 	harness.Run()
+// }
 
-func TestHarnessRunIntegrationWithConfig(t *testing.T) {
-	testenv, err := testutils.StartTestEnvironment(nil, false)
-	if err != nil {
-		t.Fatalf("fatal error starting environment: %s", err)
-	}
-	config := &harness.RestConfig{RC: testenv.Config}
-	harness := Harness{
-		TestSuite: harness.TestSuite{
-			TestDirs: []string{
-				"./test_data/",
-			},
-			// set as true to skip service account check
-			StartControlPlane: true,
-			Config:            config,
-			CRDDir:            "./test_crds/",
-		},
-		T: t,
-	}
-	harness.Run()
-	if err := testenv.Environment.Stop(); err != nil {
-		t.Log("error tearing down mock control plane", err)
-	}
-}
+// func TestHarnessRunIntegrationWithConfig(t *testing.T) {
+// 	testenv, err := testutils.StartTestEnvironment(nil, false)
+// 	if err != nil {
+// 		t.Fatalf("fatal error starting environment: %s", err)
+// 	}
+// 	config := &harness.RestConfig{RC: testenv.Config}
+// 	harness := Harness{
+// 		TestSuite: harness.TestSuite{
+// 			TestDirs: []string{
+// 				"./test_data/",
+// 			},
+// 			// set as true to skip service account check
+// 			StartControlPlane: true,
+// 			Config:            config,
+// 			CRDDir:            "./test_crds/",
+// 		},
+// 		T: t,
+// 	}
+// 	harness.Run()
+// 	if err := testenv.Environment.Stop(); err != nil {
+// 		t.Log("error tearing down mock control plane", err)
+// 	}
+// }
 
 // This test requires external KinD support to run thus is an integration test
 func TestRunBackgroundCommands(t *testing.T) {
