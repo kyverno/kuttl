@@ -6,6 +6,7 @@ import (
 	"syscall"
 	"testing"
 
+	harness "github.com/kyverno/kuttl/pkg/apis/testharness/v1beta1"
 	"github.com/stretchr/testify/assert"
 )
 
