@@ -73,6 +73,8 @@ type TestSuite struct {
 	Namespace string `json:"namespace"`
 	// Suppress is used to suppress logs
 	Suppress []string `json:"suppress"`
+	// FullName makes use of the full test case folder path instead of the folder name.
+	FullName bool
 
 	Config *RestConfig `json:"config,omitempty"`
 }

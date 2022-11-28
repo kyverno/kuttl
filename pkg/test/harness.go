@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -378,18 +379,23 @@ func (h *Harness) RunTests() {
 				test.Client = h.Client
 				test.DiscoveryClient = h.DiscoveryClient
 
+				name := test.Name
+				if h.TestSuite.FullName {
+					name = path.Join(strings.Trim(strings.Trim(testDir, "."), "/"), name)
+				}
+
 				t.Run(test.Name, func(t *testing.T) {
 					// testing.T.Parallel may block, so run it before we read time for our
 					// elapsed time calculations.
 					t.Parallel()
 
-					test.Logger = testutils.NewTestLogger(t, test.Name)
+					test.Logger = testutils.NewTestLogger(t, name)
 
 					if err := test.LoadTestSteps(); err != nil {
 						t.Fatal(err)
 					}
 
-					tc := report.NewCase(test.Name)
+					tc := report.NewCase(name)
 					test.Run(t, tc)
 					suite.AddTestcase(tc)
 				})
