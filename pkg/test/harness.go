@@ -9,7 +9,9 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -27,11 +29,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	kindConfig "sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
 
-	harness "github.com/kudobuilder/kuttl/pkg/apis/testharness/v1beta1"
-	"github.com/kudobuilder/kuttl/pkg/file"
-	"github.com/kudobuilder/kuttl/pkg/http"
-	"github.com/kudobuilder/kuttl/pkg/report"
-	testutils "github.com/kudobuilder/kuttl/pkg/test/utils"
+	harness "github.com/kyverno/kuttl/pkg/apis/testharness/v1beta1"
+	"github.com/kyverno/kuttl/pkg/file"
+	"github.com/kyverno/kuttl/pkg/http"
+	"github.com/kyverno/kuttl/pkg/report"
+	testutils "github.com/kyverno/kuttl/pkg/test/utils"
 )
 
 // Harness loads and runs tests based on the configuration provided.
@@ -375,21 +377,37 @@ func (h *Harness) RunTests() {
 			for _, test := range tests {
 				test := test
 
+				// if the test suite specifies a regex for test names to be skipped ...
+				if h.TestSuite.SkipTestRegex != "" {
+					matched, err := regexp.MatchString(h.TestSuite.SkipTestRegex, test.Name)
+					if err != nil {
+						t.Logf("failed to match %s with regex %s with error %s", test.Name, h.TestSuite.SkipTestRegex, err.Error())
+					} else if matched {
+						t.Logf("test name  %s matched with regex %s, test will be skipped", test.Name, h.TestSuite.SkipTestRegex)
+						continue
+					}
+				}
+
 				test.Client = h.Client
 				test.DiscoveryClient = h.DiscoveryClient
+
+				name := test.Name
+				if h.TestSuite.FullName {
+					name = path.Join(strings.Trim(strings.Trim(testDir, "."), "/"), name)
+				}
 
 				t.Run(test.Name, func(t *testing.T) {
 					// testing.T.Parallel may block, so run it before we read time for our
 					// elapsed time calculations.
 					t.Parallel()
 
-					test.Logger = testutils.NewTestLogger(t, test.Name)
+					test.Logger = testutils.NewTestLogger(t, name)
 
 					if err := test.LoadTestSteps(); err != nil {
 						t.Fatal(err)
 					}
 
-					tc := report.NewCase(test.Name)
+					tc := report.NewCase(name)
 					test.Run(t, tc)
 					suite.AddTestcase(tc)
 				})

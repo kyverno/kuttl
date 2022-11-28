@@ -1,5 +1,6 @@
 apiVersion: kuttl.dev/v1beta1
 kind: TestSuite
-parallel: 4
-timeout: 120
-startControlPlane: true
+parallel: 1
+timeout: 180
+fullName: true
+skipTestRegex: '_.+'

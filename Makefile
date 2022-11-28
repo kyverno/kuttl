@@ -1,16 +1,21 @@
 SHELL=/bin/bash -o pipefail
 
-CLI := kubectl-kuttl
-GIT_VERSION_PATH := github.com/kudobuilder/kuttl/pkg/version.gitVersion
-GIT_VERSION := $(shell git describe --abbrev=0 --tags | cut -b 2-)
-GIT_COMMIT_PATH := github.com/kudobuilder/kuttl/pkg/version.gitCommit
-GIT_COMMIT := $(shell git rev-parse HEAD | cut -b -8)
-SOURCE_DATE_EPOCH := $(shell git show -s --format=format:%ct HEAD)
-BUILD_DATE_PATH := github.com/kudobuilder/kuttl/pkg/version.buildDate
-DATE_FMT := "%Y-%m-%dT%H:%M:%SZ"
-BUILD_DATE := $(shell date -u -d "@$SOURCE_DATE_EPOCH" "+${DATE_FMT}" 2>/dev/null || date -u -r "${SOURCE_DATE_EPOCH}" "+${DATE_FMT}" 2>/dev/null || date -u "+${DATE_FMT}")
-LDFLAGS := -X ${GIT_VERSION_PATH}=${GIT_VERSION} -X ${GIT_COMMIT_PATH}=${GIT_COMMIT} -X ${BUILD_DATE_PATH}=${BUILD_DATE}
-GOLANGCI_LINT_VER = "1.50.1"
+CLI                      := kubectl-kuttl
+GIT_VERSION_PATH         := github.com/kyverno/kuttl/pkg/version.gitVersion
+GIT_VERSION              := $(shell git describe --abbrev=0 --tags | cut -b 2-)
+GIT_COMMIT_PATH          := github.com/kyverno/kuttl/pkg/version.gitCommit
+GIT_COMMIT               := $(shell git rev-parse HEAD | cut -b -8)
+SOURCE_DATE_EPOCH        := $(shell git show -s --format=format:%ct HEAD)
+BUILD_DATE_PATH          := github.com/kyverno/kuttl/pkg/version.buildDate
+DATE_FMT                 := "%Y-%m-%dT%H:%M:%SZ"
+BUILD_DATE               := $(shell date -u -d "@$SOURCE_DATE_EPOCH" "+${DATE_FMT}" 2>/dev/null || date -u -r "${SOURCE_DATE_EPOCH}" "+${DATE_FMT}" 2>/dev/null || date -u "+${DATE_FMT}")
+LDFLAGS                  := -X ${GIT_VERSION_PATH}=${GIT_VERSION} -X ${GIT_COMMIT_PATH}=${GIT_COMMIT} -X ${BUILD_DATE_PATH}=${BUILD_DATE}
+GOLANGCI_LINT_VER        = "1.50.1"
+TOOLS_DIR                := $(PWD)/.tools
+KIND                     := $(TOOLS_DIR)/kind
+KIND_VERSION             := v0.14.0
+KIND_IMAGE               ?= kindest/node:v1.22.15
+KIND_NAME                ?= kind
 
 export GO111MODULE=on
 
@@ -121,6 +126,15 @@ todo: ## Shows todos from code
 .PHONY: all
 all: lint test integration-test  ## Runs lint, unit and integration tests
 
+$(KIND):
+	@echo Install kind... >&2
+	@GOBIN=$(TOOLS_DIR) go install sigs.k8s.io/kind@$(KIND_VERSION)
+
+.PHONY: kind-create-cluster
+kind-create-cluster: $(KIND) ## Create kind cluster
+	@echo Create kind cluster... >&2
+	@$(KIND) create cluster --name $(KIND_NAME) --image $(KIND_IMAGE)
+
 # Run unit tests
 .PHONY: test
 test: ## Runs unit tests
@@ -133,10 +147,10 @@ endif
 
 .PHONY: integration-test
 # Run integration tests
-integration-test:  ## Runs integration tests
+integration-test: kind-create-cluster  ## Runs integration tests
 	./hack/run-integration-tests.sh
 
 # Run e2e tests
 .PHONY: e2e-test
-e2e-test: cli
+e2e-test: kind-create-cluster cli
 	./hack/run-e2e-tests.sh

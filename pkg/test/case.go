@@ -16,15 +16,16 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	eventsbeta1 "k8s.io/api/events/v1beta1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/kudobuilder/kuttl/pkg/report"
-	testutils "github.com/kudobuilder/kuttl/pkg/test/utils"
+	"github.com/kyverno/kuttl/pkg/report"
+	testutils "github.com/kyverno/kuttl/pkg/test/utils"
 )
 
 // testStepRegex contains one capturing group to determine the index of a step file.
@@ -69,13 +70,29 @@ func (t *Case) DeleteNamespace(cl client.Client, ns *namespace) error {
 		defer cancel()
 	}
 
-	return cl.Delete(ctx, &corev1.Namespace{
+	nsObj := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: ns.Name,
 		},
 		TypeMeta: metav1.TypeMeta{
 			Kind: "Namespace",
 		},
+	}
+
+	if err := cl.Delete(ctx, nsObj); err != nil {
+		if k8serrors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+
+	return wait.PollImmediateUntilWithContext(ctx, time.Second, func(ctx context.Context) (bool, error) {
+		actual := &corev1.Namespace{}
+		err := cl.Get(ctx, client.ObjectKey{Name: ns.Name}, actual)
+		if k8serrors.IsNotFound(err) {
+			return true, nil
+		}
+		return false, err
 	})
 }
 
@@ -120,7 +137,7 @@ func (t *Case) NamespaceExists(namespace string) (bool, error) {
 	}
 	ns := &corev1.Namespace{}
 	err = cl.Get(context.TODO(), client.ObjectKey{Name: namespace}, ns)
-	if err != nil && !errors.IsNotFound(err) {
+	if err != nil && !k8serrors.IsNotFound(err) {
 		return false, err
 	}
 	return ns.Name == namespace, nil
