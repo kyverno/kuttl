@@ -6,4 +6,4 @@ status:
   acceptedNames:
     kind: ProwJob
   storedVersions:
-  - v1
+  - v1beta1
