@@ -7,9 +7,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	harness "github.com/kyverno/kuttl/pkg/apis/testharness/v1beta1"
-	testutils "github.com/kyverno/kuttl/pkg/test/utils"
 )
 
 // func TestHarnessRunIntegration(t *testing.T) {
