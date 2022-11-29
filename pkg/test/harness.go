@@ -58,7 +58,7 @@ type Harness struct {
 }
 
 // LoadTests loads all of the tests in a given directory.
-func (h *Harness) LoadTests(dir string) ([]*Case, error) {
+func (h *Harness) LoadTests(dir string, shouldSkip func(string) bool) ([]*Case, error) {
 	dir, err := filepath.Abs(dir)
 	if err != nil {
 		return nil, err
@@ -78,20 +78,21 @@ func (h *Harness) LoadTests(dir string) ([]*Case, error) {
 		if !file.IsDir() {
 			continue
 		}
+		if shouldSkip == nil || !shouldSkip(file.Name()) {
+			tests = append(tests, &Case{
+				Timeout:            timeout,
+				Steps:              []*Step{},
+				Name:               file.Name(),
+				PreferredNamespace: h.TestSuite.Namespace,
+				Dir:                filepath.Join(dir, file.Name()),
+				SkipDelete:         h.TestSuite.SkipDelete,
+				Suppress:           h.TestSuite.Suppress,
+			})
 
-		tests = append(tests, &Case{
-			Timeout:            timeout,
-			Steps:              []*Step{},
-			Name:               file.Name(),
-			PreferredNamespace: h.TestSuite.Namespace,
-			Dir:                filepath.Join(dir, file.Name()),
-			SkipDelete:         h.TestSuite.SkipDelete,
-			Suppress:           h.TestSuite.Suppress,
-		})
-
-		subDirs, err := h.LoadTests(path.Join(dir, file.Name()))
-		if err == nil {
-			tests = append(tests, subDirs...)
+			subDirs, err := h.LoadTests(path.Join(dir, file.Name()), shouldSkip)
+			if err == nil {
+				tests = append(tests, subDirs...)
+			}
 		}
 	}
 
@@ -354,6 +355,19 @@ func (h *Harness) DockerClient() (testutils.DockerClient, error) {
 	return h.docker, err
 }
 
+func (h *Harness) shouldSkip(testName string) bool {
+	if h.TestSuite.SkipTestRegex != "" {
+		matched, err := regexp.MatchString(h.TestSuite.SkipTestRegex, testName)
+		if err != nil {
+			h.T.Logf("failed to match %s with regex %s with error %s", testName, h.TestSuite.SkipTestRegex, err.Error())
+		} else if matched {
+			h.T.Logf("test name  %s matched with regex %s, test will be skipped", testName, h.TestSuite.SkipTestRegex)
+			return true
+		}
+	}
+	return false
+}
+
 // RunTests should be called from within a Go test (t) and launches all of the KUTTL integration
 // tests at dir.
 func (h *Harness) RunTests() {
@@ -367,13 +381,15 @@ func (h *Harness) RunTests() {
 	// TestSuite is a TestSuiteCollection and should be renamed for v1beta2
 	realTestSuite := make(map[string][]*Case)
 	for _, testDir := range testDirs {
-		tempTests, err := h.LoadTests(testDir)
+		tempTests, err := h.LoadTests(testDir, h.shouldSkip)
 		if err != nil {
 			h.T.Fatal(err)
 		}
 		h.T.Logf("testsuite: %s has %d tests", testDir, len(tempTests))
 		// array of test cases tied to testsuite (by testdir)
-		realTestSuite[testDir] = tempTests
+		for _, t := range tempTests {
+			realTestSuite[t.Dir] = append(realTestSuite[t.Dir], t)
+		}
 	}
 
 	h.T.Run("harness", func(t *testing.T) {
@@ -383,14 +399,8 @@ func (h *Harness) RunTests() {
 				test := test
 
 				// if the test suite specifies a regex for test names to be skipped ...
-				if h.TestSuite.SkipTestRegex != "" {
-					matched, err := regexp.MatchString(h.TestSuite.SkipTestRegex, test.Name)
-					if err != nil {
-						t.Logf("failed to match %s with regex %s with error %s", test.Name, h.TestSuite.SkipTestRegex, err.Error())
-					} else if matched {
-						t.Logf("test name  %s matched with regex %s, test will be skipped", test.Name, h.TestSuite.SkipTestRegex)
-						continue
-					}
+				if h.shouldSkip(test.Name) {
+					continue
 				}
 
 				test.Client = h.Client
