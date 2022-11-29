@@ -409,7 +409,7 @@ func (t *Case) CollectTestStepFiles() (map[int64][]string, error) {
 			return nil, err
 		}
 		if index < 0 {
-			t.Logger.Log("Ignoring", file.Name(), "as it does not match file name regexp:", testStepRegex.String())
+			// t.Logger.Log("Ignoring", file.Name(), "as it does not match file name regexp:", testStepRegex.String())
 			continue
 		}
 
