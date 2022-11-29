@@ -389,9 +389,8 @@ func (h *Harness) RunTests() {
 		for _, t := range tempTests {
 			dir, err := filepath.Rel(testDir, t.Dir)
 			if err == nil {
-
+				realTestSuite[dir] = append(realTestSuite[dir], t)
 			}
-			realTestSuite[dir] = append(realTestSuite[dir], t)
 		}
 	}
 
