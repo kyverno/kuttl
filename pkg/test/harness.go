@@ -59,12 +59,12 @@ type Harness struct {
 
 // LoadTests loads all of the tests in a given directory.
 func (h *Harness) LoadTests(dir string, shouldSkip func(string) bool) ([]*Case, error) {
-	dir, err := filepath.Abs(dir)
+	absdir, err := filepath.Abs(dir)
 	if err != nil {
 		return nil, err
 	}
 
-	files, err := os.ReadDir(dir)
+	files, err := os.ReadDir(absdir)
 	if err != nil {
 		return nil, err
 	}
@@ -411,7 +411,7 @@ func (h *Harness) RunTests() {
 					name = path.Join(strings.Trim(strings.Trim(testDir, "."), "/"), name)
 				}
 
-				t.Run(test.Name, func(t *testing.T) {
+				t.Run(name, func(t *testing.T) {
 					// testing.T.Parallel may block, so run it before we read time for our
 					// elapsed time calculations.
 					t.Parallel()
