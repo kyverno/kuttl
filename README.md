@@ -1,8 +1,10 @@
-# KUTTL
+# KYVERNO-KUTTL
+
+> **Note**
+> This is Kyverno's "official" fork of the kuttl project for internal use. It is not intended for wide usage. For the official kuttl project, please see the links below.
 
 <img src="https://kuttl.dev/images/kuttl-horizontal-logo.png" width="256">
 
-[![CircleCI](https://circleci.com/gh/kudobuilder/kuttl.svg?style=svg)](https://circleci.com/gh/kudobuilder/kuttl)
 
 KUbernetes Test TooL (KUTTL) provides a declarative approach to test Kubernetes Operators.
 
@@ -25,7 +27,6 @@ We have open community meetings every 2nd and 4th Wednesday of the month at 9:00
 
 * Agenda and Notes: https://docs.google.com/document/d/1UqgtCMUHSsOohZYF8K7zX8WcErttuMSx7NbvksIbZgg
 * Zoom Meeting: https://d2iq.zoom.us/j/443128842
-
 
 ## Community, Events, Discussion, Contribution, and Support
 
