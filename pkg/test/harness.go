@@ -88,6 +88,11 @@ func (h *Harness) LoadTests(dir string) ([]*Case, error) {
 			SkipDelete:         h.TestSuite.SkipDelete,
 			Suppress:           h.TestSuite.Suppress,
 		})
+
+		subDirs, err := h.LoadTests(path.Join(dir, file.Name()))
+		if err == nil {
+			tests = append(tests, subDirs...)
+		}
 	}
 
 	return tests, nil
