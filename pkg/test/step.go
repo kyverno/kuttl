@@ -194,7 +194,7 @@ func doApply(test *testing.T, skipDelete bool, logger testutils.Logger, timeout 
 			if err := cl.Delete(context.TODO(), obj); err != nil && !k8serrors.IsNotFound(err) {
 				test.Error(err)
 			} else {
-				err := wait.PollImmediateUntilWithContext(context.TODO(), time.Second, func(ctx context.Context) (bool, error) {
+				err := wait.PollImmediateUntilWithContext(context.TODO(), 100*time.Millisecond, func(ctx context.Context) (bool, error) {
 					obj := obj.DeepCopyObject()
 					err := cl.Get(context.TODO(), testutils.ObjectKey(obj), obj.(client.Object))
 					if k8serrors.IsNotFound(err) {
