@@ -173,6 +173,52 @@ func (s *Step) DeleteExisting(namespace string) error {
 	})
 }
 
+func doApply(test *testing.T, skipDelete bool, logger testutils.Logger, timeout int, dClient discovery.DiscoveryInterface, cl client.Client, obj client.Object, namespace string) error {
+	_, _, err := testutils.Namespaced(dClient, obj, namespace)
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+	if timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
+		defer cancel()
+	}
+
+	if updated, err := testutils.CreateOrUpdate(ctx, cl, obj, true); err != nil {
+		return err
+	} else {
+		// if the object was created, register cleanup
+		if !updated && !skipDelete {
+			test.Cleanup(func() {
+				if err := cl.Delete(context.TODO(), obj); err != nil && !k8serrors.IsNotFound(err) {
+					test.Error(err)
+				} else {
+					err := wait.PollImmediateUntilWithContext(context.TODO(), time.Second, func(ctx context.Context) (bool, error) {
+						obj := obj.DeepCopyObject()
+						err := cl.Get(context.TODO(), testutils.ObjectKey(obj), obj.(client.Object))
+						if k8serrors.IsNotFound(err) {
+							return true, nil
+						}
+						return false, err
+					})
+					if err != nil {
+						test.Error(err)
+					} else {
+						logger.Log(testutils.ResourceID(obj), "deleted")
+					}
+				}
+			})
+		}
+		action := "created"
+		if updated {
+			action = "updated"
+		}
+		logger.Log(testutils.ResourceID(obj), action)
+	}
+	return nil
+}
+
 // Create applies all resources defined in the Apply list.
 func (s *Step) Create(test *testing.T, namespace string) []error {
 	cl, err := s.Client(true)
@@ -185,56 +231,21 @@ func (s *Step) Create(test *testing.T, namespace string) []error {
 		return []error{err}
 	}
 
-	errors := []error{}
+	errs := []error{}
 
 	for _, apply := range s.Apply {
-		_, _, err := testutils.Namespaced(dClient, apply.object, namespace)
-		if err != nil {
-			errors = append(errors, err)
-			continue
+		err := doApply(test, s.SkipDelete, s.Logger, s.Timeout, dClient, cl, apply.object, namespace)
+		if err != nil && !apply.shouldFail {
+			errs = append(errs, err)
 		}
-		ctx := context.Background()
-		if s.Timeout > 0 {
-			var cancel context.CancelFunc
-			ctx, cancel = context.WithTimeout(ctx, time.Duration(s.Timeout)*time.Second)
-			defer cancel()
-		}
-
-		if updated, err := testutils.CreateOrUpdate(ctx, cl, apply.object, true); err != nil {
-			errors = append(errors, err)
-		} else {
-			// if the object was created, register cleanup
-			if !updated && !s.SkipDelete {
-				obj := apply.object
-				test.Cleanup(func() {
-					if err := cl.Delete(context.TODO(), obj); err != nil && !k8serrors.IsNotFound(err) {
-						test.Error(err)
-					} else {
-						err := wait.PollImmediateUntilWithContext(context.TODO(), time.Second, func(ctx context.Context) (bool, error) {
-							obj := obj.DeepCopyObject()
-							err := cl.Get(context.TODO(), testutils.ObjectKey(obj), obj.(client.Object))
-							if k8serrors.IsNotFound(err) {
-								return true, nil
-							}
-							return false, err
-						})
-						if err != nil {
-							test.Error(err)
-						} else {
-							s.Logger.Log(testutils.ResourceID(obj), "deleted")
-						}
-					}
-				})
-			}
-			action := "created"
-			if updated {
-				action = "updated"
-			}
-			s.Logger.Log(testutils.ResourceID(apply.object), action)
+		// if there was no error but we expected one
+		if err == nil && apply.shouldFail {
+			// TODO: improve error message
+			errs = append(errs, errors.New("an error was expected but didn't happen"))
 		}
 	}
 
-	return errors
+	return errs
 }
 
 // GetTimeout gets the timeout defined for the test step.
@@ -547,7 +558,7 @@ func (s *Step) LoadYAML(file string) error {
 				}
 				s.Step = testStep
 			} else {
-				return fmt.Errorf("failed to load TestStep object from %s: it contains an object of type %T", file, apply)
+				return fmt.Errorf("failed to load TestStep object from %s: it contains an object of type %T", file, apply.object)
 			}
 			s.Step.Index = s.Index
 			if s.Step.Name != "" {
