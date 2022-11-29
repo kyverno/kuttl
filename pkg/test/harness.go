@@ -72,7 +72,6 @@ func (h *Harness) LoadTests(dir string, shouldSkip func(string) bool) ([]*Case, 
 	var tests []*Case
 
 	timeout := h.GetTimeout()
-	h.T.Logf("going to run test suite with timeout of %d seconds for each step", timeout)
 
 	for _, file := range files {
 		if !file.IsDir() {
@@ -387,10 +386,15 @@ func (h *Harness) RunTests() {
 		}
 		// array of test cases tied to testsuite (by testdir)
 		for _, t := range tempTests {
-			dir, err := filepath.Rel(testDir, t.Dir)
-			if err == nil {
-				dir = filepath.Dir(dir)
-				realTestSuite[dir] = append(realTestSuite[dir], t)
+			if err := t.LoadTestSteps(); err != nil {
+				h.T.Fatal(err)
+			}
+			if len(t.Steps) > 0 {
+				dir, err := filepath.Rel(testDir, t.Dir)
+				if err == nil {
+					dir = filepath.Dir(dir)
+					realTestSuite[dir] = append(realTestSuite[dir], t)
+				}
 			}
 		}
 	}
@@ -421,10 +425,6 @@ func (h *Harness) RunTests() {
 					t.Parallel()
 
 					test.Logger = testutils.NewTestLogger(t, name)
-
-					if err := test.LoadTestSteps(); err != nil {
-						t.Fatal(err)
-					}
 
 					tc := report.NewCase(name)
 					test.Run(t, tc)
