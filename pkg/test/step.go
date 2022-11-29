@@ -184,38 +184,37 @@ func doApply(test *testing.T, skipDelete bool, logger testutils.Logger, timeout 
 		ctx, cancel = context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
 		defer cancel()
 	}
-
-	if updated, err := testutils.CreateOrUpdate(ctx, cl, obj, true); err != nil {
+	updated, err := testutils.CreateOrUpdate(ctx, cl, obj, true)
+	if err != nil {
 		return err
-	} else {
-		// if the object was created, register cleanup
-		if !updated && !skipDelete {
-			test.Cleanup(func() {
-				if err := cl.Delete(context.TODO(), obj); err != nil && !k8serrors.IsNotFound(err) {
+	}
+	// if the object was created, register cleanup
+	if !updated && !skipDelete {
+		test.Cleanup(func() {
+			if err := cl.Delete(context.TODO(), obj); err != nil && !k8serrors.IsNotFound(err) {
+				test.Error(err)
+			} else {
+				err := wait.PollImmediateUntilWithContext(context.TODO(), time.Second, func(ctx context.Context) (bool, error) {
+					obj := obj.DeepCopyObject()
+					err := cl.Get(context.TODO(), testutils.ObjectKey(obj), obj.(client.Object))
+					if k8serrors.IsNotFound(err) {
+						return true, nil
+					}
+					return false, err
+				})
+				if err != nil {
 					test.Error(err)
 				} else {
-					err := wait.PollImmediateUntilWithContext(context.TODO(), time.Second, func(ctx context.Context) (bool, error) {
-						obj := obj.DeepCopyObject()
-						err := cl.Get(context.TODO(), testutils.ObjectKey(obj), obj.(client.Object))
-						if k8serrors.IsNotFound(err) {
-							return true, nil
-						}
-						return false, err
-					})
-					if err != nil {
-						test.Error(err)
-					} else {
-						logger.Log(testutils.ResourceID(obj), "deleted")
-					}
+					logger.Log(testutils.ResourceID(obj), "deleted")
 				}
-			})
-		}
-		action := "created"
-		if updated {
-			action = "updated"
-		}
-		logger.Log(testutils.ResourceID(obj), action)
+			}
+		})
 	}
+	action := "created"
+	if updated {
+		action = "updated"
+	}
+	logger.Log(testutils.ResourceID(obj), action)
 	return nil
 }
 
