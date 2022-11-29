@@ -466,7 +466,7 @@ func (t *Case) LoadTestSteps() error {
 			SkipDelete: t.SkipDelete,
 			Dir:        t.Dir,
 			Asserts:    []client.Object{},
-			Apply:      []client.Object{},
+			Apply:      []apply{},
 			Errors:     []client.Object{},
 		}
 		for _, file := range files {
