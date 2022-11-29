@@ -385,15 +385,19 @@ func (h *Harness) RunTests() {
 		if err != nil {
 			h.T.Fatal(err)
 		}
-		h.T.Logf("testsuite: %s has %d tests", testDir, len(tempTests))
 		// array of test cases tied to testsuite (by testdir)
 		for _, t := range tempTests {
-			realTestSuite[t.Dir] = append(realTestSuite[t.Dir], t)
+			dir, err := filepath.Rel(testDir, t.Dir)
+			if err == nil {
+
+			}
+			realTestSuite[dir] = append(realTestSuite[dir], t)
 		}
 	}
 
 	h.T.Run("harness", func(t *testing.T) {
 		for testDir, tests := range realTestSuite {
+			h.T.Logf("testsuite: %s has %d tests", testDir, len(tests))
 			suite := h.report.NewSuite(testDir)
 			for _, test := range tests {
 				test := test
