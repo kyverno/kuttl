@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // var testenv testutils.TestEnvironment
@@ -363,7 +362,7 @@ func TestOverriddenKubeconfigPathResolution(t *testing.T) {
 }
 
 func TestTwoTestStepping(t *testing.T) {
-	apply := []client.Object{}
+	apply := []apply{}
 	step := &Step{
 		Name:  "twostepping",
 		Index: 0,

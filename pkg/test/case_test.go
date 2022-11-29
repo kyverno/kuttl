@@ -36,16 +36,18 @@ func TestLoadTestSteps(t *testing.T) {
 						},
 						Index: 0,
 					},
-					Apply: []client.Object{
-						testutils.WithSpec(t, testutils.NewPod("test", ""), map[string]interface{}{
-							"restartPolicy": "Never",
-							"containers": []map[string]interface{}{
-								{
-									"name":  "nginx",
-									"image": "nginx:1.7.9",
+					Apply: []apply{
+						{
+							object: testutils.WithSpec(t, testutils.NewPod("test", ""), map[string]interface{}{
+								"restartPolicy": "Never",
+								"containers": []map[string]interface{}{
+									{
+										"name":  "nginx",
+										"image": "nginx:1.7.9",
+									},
 								},
-							},
-						}),
+							}),
+						},
 					},
 					Asserts: []client.Object{
 						testutils.WithStatus(t, testutils.NewPod("test", ""), map[string]interface{}{
@@ -80,16 +82,18 @@ func TestLoadTestSteps(t *testing.T) {
 						},
 						Timeout: 20,
 					},
-					Apply: []client.Object{
-						testutils.WithSpec(t, testutils.NewPod("test2", ""), map[string]interface{}{
-							"restartPolicy": "Never",
-							"containers": []map[string]interface{}{
-								{
-									"name":  "nginx",
-									"image": "nginx:1.7.9",
+					Apply: []apply{
+						{
+							object: testutils.WithSpec(t, testutils.NewPod("test2", ""), map[string]interface{}{
+								"restartPolicy": "Never",
+								"containers": []map[string]interface{}{
+									{
+										"name":  "nginx",
+										"image": "nginx:1.7.9",
+									},
 								},
-							},
-						}),
+							}),
+						},
 					},
 					Asserts: []client.Object{
 						testutils.WithStatus(t, testutils.NewPod("test2", ""), map[string]interface{}{
@@ -101,23 +105,27 @@ func TestLoadTestSteps(t *testing.T) {
 				{
 					Name:  "pod",
 					Index: 2,
-					Apply: []client.Object{
-						testutils.WithSpec(t, testutils.NewPod("test4", ""), map[string]interface{}{
-							"containers": []map[string]interface{}{
-								{
-									"name":  "nginx",
-									"image": "nginx:1.7.9",
+					Apply: []apply{
+						{
+							object: testutils.WithSpec(t, testutils.NewPod("test4", ""), map[string]interface{}{
+								"containers": []map[string]interface{}{
+									{
+										"name":  "nginx",
+										"image": "nginx:1.7.9",
+									},
 								},
-							},
-						}),
-						testutils.WithSpec(t, testutils.NewPod("test3", ""), map[string]interface{}{
-							"containers": []map[string]interface{}{
-								{
-									"name":  "nginx",
-									"image": "nginx:1.7.9",
+							}),
+						},
+						{
+							object: testutils.WithSpec(t, testutils.NewPod("test3", ""), map[string]interface{}{
+								"containers": []map[string]interface{}{
+									{
+										"name":  "nginx",
+										"image": "nginx:1.7.9",
+									},
 								},
-							},
-						}),
+							}),
+						},
 					},
 					Asserts: []client.Object{
 						testutils.WithStatus(t, testutils.NewPod("test3", ""), map[string]interface{}{
@@ -139,25 +147,29 @@ func TestLoadTestSteps(t *testing.T) {
 						},
 						Index: 3,
 					},
-					Apply: []client.Object{
-						testutils.WithSpec(t, testutils.NewPod("test6", ""), map[string]interface{}{
-							"restartPolicy": "Never",
-							"containers": []map[string]interface{}{
-								{
-									"name":  "nginx",
-									"image": "nginx:1.7.9",
+					Apply: []apply{
+						{
+							object: testutils.WithSpec(t, testutils.NewPod("test6", ""), map[string]interface{}{
+								"restartPolicy": "Never",
+								"containers": []map[string]interface{}{
+									{
+										"name":  "nginx",
+										"image": "nginx:1.7.9",
+									},
 								},
-							},
-						}),
-						testutils.WithSpec(t, testutils.NewPod("test5", ""), map[string]interface{}{
-							"restartPolicy": "Never",
-							"containers": []map[string]interface{}{
-								{
-									"name":  "nginx",
-									"image": "nginx:1.7.9",
+							}),
+						},
+						{
+							object: testutils.WithSpec(t, testutils.NewPod("test5", ""), map[string]interface{}{
+								"restartPolicy": "Never",
+								"containers": []map[string]interface{}{
+									{
+										"name":  "nginx",
+										"image": "nginx:1.7.9",
+									},
 								},
-							},
-						}),
+							}),
+						},
 					},
 					Asserts: []client.Object{
 						testutils.WithSpec(t, testutils.NewPod("test5", ""), map[string]interface{}{
@@ -174,22 +186,24 @@ func TestLoadTestSteps(t *testing.T) {
 				{
 					Name:  "pod",
 					Index: 0,
-					Apply: []client.Object{
-						&unstructured.Unstructured{
-							Object: map[string]interface{}{
-								"apiVersion": "v1",
-								"kind":       "Pod",
-								"metadata": map[string]interface{}{
-									"name": "pod-1",
-									"labels": map[string]interface{}{
-										"app": "nginx",
+					Apply: []apply{
+						{
+							object: &unstructured.Unstructured{
+								Object: map[string]interface{}{
+									"apiVersion": "v1",
+									"kind":       "Pod",
+									"metadata": map[string]interface{}{
+										"name": "pod-1",
+										"labels": map[string]interface{}{
+											"app": "nginx",
+										},
 									},
-								},
-								"spec": map[string]interface{}{
-									"containers": []interface{}{
-										map[string]interface{}{
-											"image": "nginx:1.7.9",
-											"name":  "nginx",
+									"spec": map[string]interface{}{
+										"containers": []interface{}{
+											map[string]interface{}{
+												"image": "nginx:1.7.9",
+												"name":  "nginx",
+											},
 										},
 									},
 								},

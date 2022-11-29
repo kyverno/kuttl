@@ -29,6 +29,11 @@ import (
 // meaning (ex. assert) or contains an appliable object, and extra name elements.
 var fileNameRegex = regexp.MustCompile(`^(?:\d+-)?([^-\.]+)(-[^\.]+)?(?:\.yaml)?$`)
 
+type apply struct {
+	object     client.Object
+	shouldFail bool
+}
+
 // A Step contains the name of the test step, its index in the test,
 // and all of the test step's settings (including objects to apply and assert on).
 type Step struct {
@@ -42,7 +47,7 @@ type Step struct {
 	Assert *harness.TestAssert
 
 	Asserts []client.Object
-	Apply   []client.Object
+	Apply   []apply
 	Errors  []client.Object
 
 	Timeout int
@@ -66,13 +71,13 @@ func (s *Step) Clean(namespace string) error {
 		return err
 	}
 
-	for _, obj := range s.Apply {
-		_, _, err := testutils.Namespaced(dClient, obj, namespace)
+	for _, apply := range s.Apply {
+		_, _, err := testutils.Namespaced(dClient, apply.object, namespace)
 		if err != nil {
 			return err
 		}
 
-		if err := cl.Delete(context.TODO(), obj); err != nil && !k8serrors.IsNotFound(err) {
+		if err := cl.Delete(context.TODO(), apply.object); err != nil && !k8serrors.IsNotFound(err) {
 			return err
 		}
 	}
@@ -168,6 +173,51 @@ func (s *Step) DeleteExisting(namespace string) error {
 	})
 }
 
+func doApply(test *testing.T, skipDelete bool, logger testutils.Logger, timeout int, dClient discovery.DiscoveryInterface, cl client.Client, obj client.Object, namespace string) error {
+	_, _, err := testutils.Namespaced(dClient, obj, namespace)
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+	if timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
+		defer cancel()
+	}
+	updated, err := testutils.CreateOrUpdate(ctx, cl, obj, true)
+	if err != nil {
+		return err
+	}
+	// if the object was created, register cleanup
+	if !updated && !skipDelete {
+		test.Cleanup(func() {
+			if err := cl.Delete(context.TODO(), obj); err != nil && !k8serrors.IsNotFound(err) {
+				test.Error(err)
+			} else {
+				err := wait.PollImmediateUntilWithContext(context.TODO(), time.Second, func(ctx context.Context) (bool, error) {
+					obj := obj.DeepCopyObject()
+					err := cl.Get(context.TODO(), testutils.ObjectKey(obj), obj.(client.Object))
+					if k8serrors.IsNotFound(err) {
+						return true, nil
+					}
+					return false, err
+				})
+				if err != nil {
+					test.Error(err)
+				} else {
+					logger.Log(testutils.ResourceID(obj), "deleted")
+				}
+			}
+		})
+	}
+	action := "created"
+	if updated {
+		action = "updated"
+	}
+	logger.Log(testutils.ResourceID(obj), action)
+	return nil
+}
+
 // Create applies all resources defined in the Apply list.
 func (s *Step) Create(test *testing.T, namespace string) []error {
 	cl, err := s.Client(true)
@@ -180,56 +230,21 @@ func (s *Step) Create(test *testing.T, namespace string) []error {
 		return []error{err}
 	}
 
-	errors := []error{}
+	errs := []error{}
 
-	for _, obj := range s.Apply {
-		_, _, err := testutils.Namespaced(dClient, obj, namespace)
-		if err != nil {
-			errors = append(errors, err)
-			continue
+	for _, apply := range s.Apply {
+		err := doApply(test, s.SkipDelete, s.Logger, s.Timeout, dClient, cl, apply.object, namespace)
+		if err != nil && !apply.shouldFail {
+			errs = append(errs, err)
 		}
-		ctx := context.Background()
-		if s.Timeout > 0 {
-			var cancel context.CancelFunc
-			ctx, cancel = context.WithTimeout(ctx, time.Duration(s.Timeout)*time.Second)
-			defer cancel()
-		}
-
-		if updated, err := testutils.CreateOrUpdate(ctx, cl, obj, true); err != nil {
-			errors = append(errors, err)
-		} else {
-			// if the object was created, register cleanup
-			if !updated && !s.SkipDelete {
-				obj := obj
-				test.Cleanup(func() {
-					if err := cl.Delete(context.TODO(), obj); err != nil && !k8serrors.IsNotFound(err) {
-						test.Error(err)
-					} else {
-						err := wait.PollImmediateUntilWithContext(context.TODO(), time.Second, func(ctx context.Context) (bool, error) {
-							obj := obj.DeepCopyObject()
-							err := cl.Get(context.TODO(), testutils.ObjectKey(obj), obj.(client.Object))
-							if k8serrors.IsNotFound(err) {
-								return true, nil
-							}
-							return false, err
-						})
-						if err != nil {
-							test.Error(err)
-						} else {
-							s.Logger.Log(testutils.ResourceID(obj), "deleted")
-						}
-					}
-				})
-			}
-			action := "created"
-			if updated {
-				action = "updated"
-			}
-			s.Logger.Log(testutils.ResourceID(obj), action)
+		// if there was no error but we expected one
+		if err == nil && apply.shouldFail {
+			// TODO: improve error message
+			errs = append(errs, errors.New("an error was expected but didn't happen"))
 		}
 	}
 
-	return errors
+	return errs
 }
 
 // GetTimeout gets the timeout defined for the test step.
@@ -532,17 +547,17 @@ func (s *Step) LoadYAML(file string) error {
 		}
 	}
 
-	applies := []client.Object{}
+	applies := []apply{}
 
-	for _, obj := range s.Apply {
-		if obj.GetObjectKind().GroupVersionKind().Kind == "TestStep" {
-			if testStep, ok := obj.(*harness.TestStep); ok {
+	for _, apply := range s.Apply {
+		if apply.object.GetObjectKind().GroupVersionKind().Kind == "TestStep" {
+			if testStep, ok := apply.object.(*harness.TestStep); ok {
 				if s.Step != nil {
 					return fmt.Errorf("more than 1 TestStep not allowed in step %q", s.Name)
 				}
 				s.Step = testStep
 			} else {
-				return fmt.Errorf("failed to load TestStep object from %s: it contains an object of type %T", file, obj)
+				return fmt.Errorf("failed to load TestStep object from %s: it contains an object of type %T", file, apply.object)
 			}
 			s.Step.Index = s.Index
 			if s.Step.Name != "" {
@@ -553,7 +568,7 @@ func (s *Step) LoadYAML(file string) error {
 				s.Kubeconfig = cleanPath(exKubeconfig, s.Dir)
 			}
 		} else {
-			applies = append(applies, obj)
+			applies = append(applies, apply)
 		}
 	}
 
@@ -561,12 +576,14 @@ func (s *Step) LoadYAML(file string) error {
 	if s.Step != nil {
 		// process configured step applies
 		for _, applyPath := range s.Step.Apply {
-			exApply := env.Expand(applyPath)
-			apply, err := ObjectsFromPath(exApply, s.Dir)
+			exApply := env.Expand(applyPath.File)
+			aa, err := ObjectsFromPath(exApply, s.Dir)
 			if err != nil {
 				return fmt.Errorf("step %q apply path %s: %w", s.Name, exApply, err)
 			}
-			applies = append(applies, apply...)
+			for _, a := range aa {
+				applies = append(applies, apply{object: a})
+			}
 		}
 		// process configured step asserts
 		for _, assertPath := range s.Step.Assert {
@@ -615,7 +632,9 @@ func (s *Step) populateObjectsByFileName(fileName string, objects []client.Objec
 				s.Name = matches[1]
 			}
 		}
-		s.Apply = append(s.Apply, objects...)
+		for _, a := range objects {
+			s.Apply = append(s.Apply, apply{object: a})
+		}
 	}
 
 	return nil

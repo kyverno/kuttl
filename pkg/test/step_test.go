@@ -36,8 +36,10 @@ func TestStepClean(t *testing.T) {
 	cl := fake.NewClientBuilder().WithObjects(pod, pod2WithNamespace, pod2WithDiffNamespace).WithScheme(scheme.Scheme).Build()
 
 	step := Step{
-		Apply: []client.Object{
-			pod, pod2WithDiffNamespace, testutils.NewPod("does-not-exist", ""),
+		Apply: []apply{
+			{object: pod},
+			{object: pod2WithDiffNamespace},
+			{object: testutils.NewPod("does-not-exist", "")},
 		},
 		Client:          func(bool) (client.Client, error) { return cl, nil },
 		DiscoveryClient: func() (discovery.DiscoveryInterface, error) { return testutils.FakeDiscoveryClient(), nil },
@@ -68,8 +70,11 @@ func TestStepCreate(t *testing.T) {
 
 	step := Step{
 		Logger: testutils.NewTestLogger(t, ""),
-		Apply: []client.Object{
-			pod.DeepCopy(), podWithNamespace.DeepCopy(), clusterScopedResource, updateToApply,
+		Apply: []apply{
+			{object: pod.DeepCopy()},
+			{object: podWithNamespace.DeepCopy()},
+			{object: clusterScopedResource},
+			{object: updateToApply},
 		},
 		Client:          func(bool) (client.Client, error) { return cl, nil },
 		DiscoveryClient: func() (discovery.DiscoveryInterface, error) { return testutils.FakeDiscoveryClient(), nil },
@@ -283,8 +288,8 @@ func TestRun(t *testing.T) {
 	}{
 		{
 			testName: "successful run", Step: Step{
-				Apply: []client.Object{
-					testutils.NewPod("hello", ""),
+				Apply: []apply{
+					{object: testutils.NewPod("hello", "")},
 				},
 				Asserts: []client.Object{
 					testutils.NewPod("hello", ""),
@@ -293,8 +298,8 @@ func TestRun(t *testing.T) {
 		},
 		{
 			"failed run", true, Step{
-				Apply: []client.Object{
-					testutils.NewPod("hello", ""),
+				Apply: []apply{
+					{object: testutils.NewPod("hello", "")},
 				},
 				Asserts: []client.Object{
 					testutils.WithStatus(t, testutils.NewPod("hello", ""), map[string]interface{}{
@@ -305,8 +310,8 @@ func TestRun(t *testing.T) {
 		},
 		{
 			"delayed run", false, Step{
-				Apply: []client.Object{
-					testutils.NewPod("hello", ""),
+				Apply: []apply{
+					{object: testutils.NewPod("hello", "")},
 				},
 				Asserts: []client.Object{
 					testutils.WithStatus(t, testutils.NewPod("hello", ""), map[string]interface{}{
