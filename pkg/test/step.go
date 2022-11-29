@@ -561,7 +561,7 @@ func (s *Step) LoadYAML(file string) error {
 	if s.Step != nil {
 		// process configured step applies
 		for _, applyPath := range s.Step.Apply {
-			exApply := env.Expand(applyPath)
+			exApply := env.Expand(applyPath.File)
 			apply, err := ObjectsFromPath(exApply, s.Dir)
 			if err != nil {
 				return fmt.Errorf("step %q apply path %s: %w", s.Name, exApply, err)

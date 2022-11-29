@@ -1,6 +1,8 @@
 package v1beta1
 
 import (
+	"encoding/json"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
@@ -81,6 +83,30 @@ type TestSuite struct {
 	Config *RestConfig `json:"config,omitempty"`
 }
 
+// Apply holds infos for an apply statement
+type Apply struct {
+	File       string `json:"file,omitempty"`
+	ShouldFail bool   `json:"shouldFail,omitempty"`
+}
+
+// UnmarshalJSON implements the json.Unmarshaller interface.
+func (apply *Apply) UnmarshalJSON(value []byte) error {
+	if value[0] == '"' {
+		apply.ShouldFail = false
+		return json.Unmarshal(value, &apply.File)
+	}
+	data := struct {
+		File       string `json:"file,omitempty"`
+		ShouldFail bool   `json:"shouldFail,omitempty"`
+	}{}
+	if err := json.Unmarshal(value, &data); err != nil {
+		return err
+	}
+	apply.File = data.File
+	apply.ShouldFail = data.ShouldFail
+	return nil
+}
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // TestStep settings to apply to a test step.go
@@ -96,7 +122,7 @@ type TestStep struct {
 	// Apply, Assert and Error lists of files or directories to use in the test step.
 	// Useful to reuse a number of applies across tests / test steps.
 	// all relative paths are relative to the folder the TestStep is defined in.
-	Apply  []string `json:"apply,omitempty"`
+	Apply  []Apply  `json:"apply,omitempty"`
 	Assert []string `json:"assert,omitempty"`
 	Error  []string `json:"error,omitempty"`
 
