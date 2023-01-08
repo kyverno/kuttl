@@ -582,7 +582,7 @@ func (s *Step) LoadYAML(file string) error {
 				return fmt.Errorf("step %q apply path %s: %w", s.Name, exApply, err)
 			}
 			for _, a := range aa {
-				applies = append(applies, apply{object: a})
+				applies = append(applies, apply{object: a, shouldFail: applyPath.ShouldFail})
 			}
 		}
 		// process configured step asserts
