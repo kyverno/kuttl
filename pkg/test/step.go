@@ -198,18 +198,19 @@ func doApply(test *testing.T, skipDelete bool, logger testutils.Logger, timeout 
 				defer cancel()
 			}
 			if err := wait.PollImmediateUntilWithContext(ctx, 100*time.Millisecond, func(ctx context.Context) (bool, error) {
-				err := cl.Delete(ctx, obj)
-				return err == nil || k8serrors.IsNotFound(err), err
+				if err := cl.Delete(ctx, obj); err == nil || k8serrors.IsNotFound(err) {
+					return true, nil
+				}
+				return false, nil
 			}); err != nil && !k8serrors.IsNotFound(err) {
 				test.Error(err)
 			} else {
 				if err := wait.PollImmediateUntilWithContext(ctx, 100*time.Millisecond, func(ctx context.Context) (bool, error) {
-					obj := obj.DeepCopyObject()
-					err := cl.Get(ctx, testutils.ObjectKey(obj), obj.(client.Object))
+					err := cl.Get(ctx, testutils.ObjectKey(obj), obj)
 					if k8serrors.IsNotFound(err) {
 						return true, nil
 					}
-					return false, err
+					return false, nil
 				}); err != nil {
 					test.Error(err)
 				} else {
