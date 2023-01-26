@@ -191,18 +191,26 @@ func doApply(test *testing.T, skipDelete bool, logger testutils.Logger, timeout 
 	// if the object was created, register cleanup
 	if !updated && !skipDelete {
 		test.Cleanup(func() {
-			if err := cl.Delete(context.TODO(), obj); err != nil && !k8serrors.IsNotFound(err) {
+			ctx := context.Background()
+			if timeout > 0 {
+				var cancel context.CancelFunc
+				ctx, cancel = context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
+				defer cancel()
+			}
+			if err := wait.PollImmediateUntilWithContext(ctx, 100*time.Millisecond, func(ctx context.Context) (bool, error) {
+				err := cl.Delete(ctx, obj)
+				return err == nil || k8serrors.IsNotFound(err), err
+			}); err != nil && !k8serrors.IsNotFound(err) {
 				test.Error(err)
 			} else {
-				err := wait.PollImmediateUntilWithContext(context.TODO(), 100*time.Millisecond, func(ctx context.Context) (bool, error) {
+				if err := wait.PollImmediateUntilWithContext(ctx, 100*time.Millisecond, func(ctx context.Context) (bool, error) {
 					obj := obj.DeepCopyObject()
-					err := cl.Get(context.TODO(), testutils.ObjectKey(obj), obj.(client.Object))
+					err := cl.Get(ctx, testutils.ObjectKey(obj), obj.(client.Object))
 					if k8serrors.IsNotFound(err) {
 						return true, nil
 					}
 					return false, err
-				})
-				if err != nil {
+				}); err != nil {
 					test.Error(err)
 				} else {
 					logger.Log(testutils.ResourceID(obj), "deleted")
