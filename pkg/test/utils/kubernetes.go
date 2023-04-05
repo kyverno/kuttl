@@ -845,11 +845,10 @@ func CreateOrUpdate(ctx context.Context, cl client.Client, obj client.Object, re
 
 		err := cl.Get(ctx, ObjectKey(expected), actual)
 		if err == nil {
-			if err = PatchObject(actual, expected); err != nil {
-				return err
-			}
-
 			if patch {
+				if err = PatchObject(actual, expected); err != nil {
+					return err
+				}
 				var expectedBytes []byte
 				expectedBytes, err = apijson.Marshal(expected)
 				if err != nil {
@@ -857,6 +856,11 @@ func CreateOrUpdate(ctx context.Context, cl client.Client, obj client.Object, re
 				}
 				err = cl.Patch(ctx, actual, client.RawPatch(types.MergePatchType, expectedBytes))
 			} else {
+				if actualMeta, err := meta.Accessor(actual); err != nil {
+					return err
+				} else {
+					obj.SetResourceVersion(actualMeta.GetResourceVersion())
+				}
 				err = cl.Update(ctx, obj)
 			}
 			updated = true
