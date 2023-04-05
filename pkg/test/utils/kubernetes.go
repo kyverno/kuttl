@@ -856,11 +856,11 @@ func CreateOrUpdate(ctx context.Context, cl client.Client, obj client.Object, re
 				}
 				err = cl.Patch(ctx, actual, client.RawPatch(types.MergePatchType, expectedBytes))
 			} else {
-				if actualMeta, err := meta.Accessor(actual); err != nil {
-					return err
-				} else {
-					obj.SetResourceVersion(actualMeta.GetResourceVersion())
+				actualMeta, err2 := meta.Accessor(actual)
+				if err2 != nil {
+					return err2
 				}
+				obj.SetResourceVersion(actualMeta.GetResourceVersion())
 				err = cl.Update(ctx, obj)
 			}
 			updated = true
