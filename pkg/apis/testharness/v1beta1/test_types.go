@@ -87,23 +87,27 @@ type TestSuite struct {
 type Apply struct {
 	File       string `json:"file,omitempty"`
 	ShouldFail bool   `json:"shouldFail,omitempty"`
+	Patch      bool   `json:"patch,omitempty"`
 }
 
 // UnmarshalJSON implements the json.Unmarshaller interface.
 func (apply *Apply) UnmarshalJSON(value []byte) error {
 	if value[0] == '"' {
 		apply.ShouldFail = false
+		apply.Patch = true
 		return json.Unmarshal(value, &apply.File)
 	}
 	data := struct {
 		File       string `json:"file,omitempty"`
 		ShouldFail bool   `json:"shouldFail,omitempty"`
+		Patch      *bool  `json:"patch,omitempty"`
 	}{}
 	if err := json.Unmarshal(value, &data); err != nil {
 		return err
 	}
 	apply.File = data.File
 	apply.ShouldFail = data.ShouldFail
+	apply.Patch = data.Patch == nil || *data.Patch
 	return nil
 }
 

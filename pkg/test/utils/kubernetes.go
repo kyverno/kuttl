@@ -596,7 +596,7 @@ func InstallManifests(ctx context.Context, c client.Client, dClient discovery.Di
 				}
 			}
 
-			updated, err := CreateOrUpdate(ctx, c, obj, true)
+			updated, err := CreateOrUpdate(ctx, c, obj, true, true)
 			if err != nil {
 				return fmt.Errorf("error creating resource %s: %w", ResourceID(obj), err)
 			}
@@ -830,7 +830,7 @@ func FakeDiscoveryClient() discovery.DiscoveryInterface {
 // CreateOrUpdate will create obj if it does not exist and update if it it does.
 // retryonerror indicates whether we retry in case of conflict
 // Returns true if the object was updated and false if it was created.
-func CreateOrUpdate(ctx context.Context, cl client.Client, obj client.Object, retryOnError bool) (updated bool, err error) {
+func CreateOrUpdate(ctx context.Context, cl client.Client, obj client.Object, retryOnError bool, patch bool) (updated bool, err error) {
 	orig := obj.DeepCopyObject()
 
 	validators := []func(err error) bool{k8serrors.IsAlreadyExists}
@@ -849,13 +849,16 @@ func CreateOrUpdate(ctx context.Context, cl client.Client, obj client.Object, re
 				return err
 			}
 
-			var expectedBytes []byte
-			expectedBytes, err = apijson.Marshal(expected)
-			if err != nil {
-				return err
+			if patch {
+				var expectedBytes []byte
+				expectedBytes, err = apijson.Marshal(expected)
+				if err != nil {
+					return err
+				}
+				err = cl.Patch(ctx, actual, client.RawPatch(types.MergePatchType, expectedBytes))
+			} else {
+				err = cl.Update(ctx, obj)
 			}
-
-			err = cl.Patch(ctx, actual, client.RawPatch(types.MergePatchType, expectedBytes))
 			updated = true
 		} else if k8serrors.IsNotFound(err) {
 			err = cl.Create(ctx, obj)

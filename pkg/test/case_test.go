@@ -47,6 +47,7 @@ func TestLoadTestSteps(t *testing.T) {
 									},
 								},
 							}),
+							patch: true,
 						},
 					},
 					Asserts: []client.Object{
@@ -93,6 +94,7 @@ func TestLoadTestSteps(t *testing.T) {
 									},
 								},
 							}),
+							patch: true,
 						},
 					},
 					Asserts: []client.Object{
@@ -115,6 +117,7 @@ func TestLoadTestSteps(t *testing.T) {
 									},
 								},
 							}),
+							patch: true,
 						},
 						{
 							object: testutils.WithSpec(t, testutils.NewPod("test3", ""), map[string]interface{}{
@@ -125,6 +128,7 @@ func TestLoadTestSteps(t *testing.T) {
 									},
 								},
 							}),
+							patch: true,
 						},
 					},
 					Asserts: []client.Object{
@@ -158,6 +162,7 @@ func TestLoadTestSteps(t *testing.T) {
 									},
 								},
 							}),
+							patch: true,
 						},
 						{
 							object: testutils.WithSpec(t, testutils.NewPod("test5", ""), map[string]interface{}{
@@ -169,6 +174,7 @@ func TestLoadTestSteps(t *testing.T) {
 									},
 								},
 							}),
+							patch: true,
 						},
 					},
 					Asserts: []client.Object{
@@ -208,6 +214,7 @@ func TestLoadTestSteps(t *testing.T) {
 									},
 								},
 							},
+							patch: true,
 						},
 					},
 					Asserts: []client.Object{

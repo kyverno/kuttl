@@ -32,6 +32,7 @@ var fileNameRegex = regexp.MustCompile(`^(?:\d+-)?([^-\.]+)(-[^\.]+)?(?:\.yaml)?
 type apply struct {
 	object     client.Object
 	shouldFail bool
+	patch      bool
 }
 
 // A Step contains the name of the test step, its index in the test,
@@ -173,7 +174,7 @@ func (s *Step) DeleteExisting(namespace string) error {
 	})
 }
 
-func doApply(test *testing.T, skipDelete bool, logger testutils.Logger, timeout int, dClient discovery.DiscoveryInterface, cl client.Client, obj client.Object, namespace string) error {
+func doApply(test *testing.T, skipDelete bool, logger testutils.Logger, timeout int, dClient discovery.DiscoveryInterface, cl client.Client, obj client.Object, namespace string, patch bool) error {
 	_, _, err := testutils.Namespaced(dClient, obj, namespace)
 	if err != nil {
 		return err
@@ -184,7 +185,7 @@ func doApply(test *testing.T, skipDelete bool, logger testutils.Logger, timeout 
 		ctx, cancel = context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
 		defer cancel()
 	}
-	updated, err := testutils.CreateOrUpdate(ctx, cl, obj, true)
+	updated, err := testutils.CreateOrUpdate(ctx, cl, obj, true, patch)
 	if err != nil {
 		return err
 	}
@@ -242,7 +243,7 @@ func (s *Step) Create(test *testing.T, namespace string) []error {
 	errs := []error{}
 
 	for _, apply := range s.Apply {
-		err := doApply(test, s.SkipDelete, s.Logger, s.Timeout, dClient, cl, apply.object, namespace)
+		err := doApply(test, s.SkipDelete, s.Logger, s.Timeout, dClient, cl, apply.object, namespace, apply.patch)
 		if err != nil && !apply.shouldFail {
 			errs = append(errs, err)
 		}
@@ -591,7 +592,7 @@ func (s *Step) LoadYAML(file string) error {
 				return fmt.Errorf("step %q apply path %s: %w", s.Name, exApply, err)
 			}
 			for _, a := range aa {
-				applies = append(applies, apply{object: a, shouldFail: applyPath.ShouldFail})
+				applies = append(applies, apply{object: a, shouldFail: applyPath.ShouldFail, patch: applyPath.Patch})
 			}
 		}
 		// process configured step asserts
@@ -642,7 +643,7 @@ func (s *Step) populateObjectsByFileName(fileName string, objects []client.Objec
 			}
 		}
 		for _, a := range objects {
-			s.Apply = append(s.Apply, apply{object: a})
+			s.Apply = append(s.Apply, apply{object: a, patch: true})
 		}
 	}
 
