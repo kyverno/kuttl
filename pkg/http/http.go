@@ -10,7 +10,7 @@ import (
 	testutils "github.com/kyverno/kuttl/pkg/test/utils"
 )
 
-// IsURL returns true if string is an URL
+// IsURL returns true if string is a URL
 func IsURL(str string) bool {
 	u, err := url.Parse(str)
 	return err == nil && u.Scheme != "" && u.Host != ""

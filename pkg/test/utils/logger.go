@@ -54,7 +54,7 @@ func (t *TestLogger) WithPrefix(prefix string) Logger {
 
 // Write implements the io.Writer interface.
 // Logs each line written to it, buffers incomplete lines until the next Write() call.
-func (t *TestLogger) Write(p []byte) (n int, err error) {
+func (t *TestLogger) Write(p []byte) (int, error) {
 	t.buffer = append(t.buffer, p...)
 
 	splitBuf := bytes.Split(t.buffer, []byte{'\n'})
