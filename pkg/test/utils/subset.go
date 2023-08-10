@@ -69,7 +69,7 @@ func IsSubset(expected, actual interface{}) error {
 			if !actualValue.IsValid() {
 				return &SubsetError{
 					path:    []string{iter.Key().String()},
-					message: "key is missing from map",
+					message: fmt.Sprintf("key '%s' is missing from map", iter.Key().String()),
 				}
 			}
 
