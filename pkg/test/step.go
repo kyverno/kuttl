@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"gopkg.in/yaml.v2"
+
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -736,6 +738,28 @@ func validateFieldFile(file string, dir string) error {
 	_, err := os.Stat(completeFile)
 	if os.IsNotExist(err) {
 		return fmt.Errorf("the file %s specified in the field does not exist", completeFile)
+	}
+
+	// Check if the file is in yaml format
+	err = validateYAMLFormat(completeFile)
+	if err != nil {
+		return fmt.Errorf("unable to validate yaml format and indentation for file %s", completeFile)
+	}
+
+	return nil
+}
+
+// validateYAMLFormat checks if the yaml file is in correct format and indentation
+func validateYAMLFormat(file string) error {
+	data, err := os.ReadFile(file)
+	if err != nil {
+		return fmt.Errorf("failed to read file %s: %w", file, err)
+	}
+
+	var temp []client.Object
+	err = yaml.Unmarshal(data, &temp)
+	if err != nil {
+		return fmt.Errorf("failed to parse yaml file %s: %w", file, err)
 	}
 
 	return nil
