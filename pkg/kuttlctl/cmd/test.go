@@ -162,7 +162,7 @@ For more detailed documentation, visit: https://kuttl.dev`,
 				options.SkipClusterDelete = skipClusterDelete
 			}
 
-			if isSet(flags, "exit-first-error") {
+			if isSet(flags, "stop-on-first-failure") {
 				options.StopOnFirstFailure = stopOnFirstFailure
 			}
 
