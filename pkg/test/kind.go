@@ -92,7 +92,6 @@ func (k *kind) Stop() error {
 	return k.Provider.Delete(k.context, k.explicitPath)
 }
 
-// loadContainer loads a Docker container image onto a KIND node.
 func loadContainer(docker testutils.DockerClient, node nodes.Node, container string) error {
 	image, err := docker.ImageSave(context.TODO(), []string{container})
 	if err != nil {
@@ -106,5 +105,7 @@ func loadContainer(docker testutils.DockerClient, node nodes.Node, container str
 
 // IsMinVersion checks if pass ver is the min required kind version
 func IsMinVersion(ver string) bool {
-	return version.CompareKubeAwareVersionStrings("kind.sigs.k8s.io/v1alpha4", ver) != -1
+	minVersion := "kind.sigs.k8s.io/v1alpha4"
+	comp := version.CompareKubeAwareVersionStrings(minVersion, ver)
+	return comp != -1
 }

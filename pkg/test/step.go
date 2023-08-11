@@ -174,7 +174,6 @@ func (s *Step) DeleteExisting(namespace string) error {
 	})
 }
 
-// doApply performs the actual object creation/update and cleanup.
 func doApply(test *testing.T, skipDelete bool, logger testutils.Logger, timeout int, dClient discovery.DiscoveryInterface, cl client.Client, obj client.Object, namespace string) error {
 	_, _, err := testutils.Namespaced(dClient, obj, namespace)
 	if err != nil {
@@ -267,7 +266,6 @@ func (s *Step) GetTimeout() int {
 	return timeout
 }
 
-// list returns a list of unstructured objects of a given GVK and namespace.
 func list(cl client.Client, gvk schema.GroupVersionKind, namespace string) ([]unstructured.Unstructured, error) {
 	list := unstructured.UnstructuredList{}
 	list.SetGroupVersionKind(gvk)
@@ -688,7 +686,6 @@ func cleanPath(path, dir string) string {
 	return filepath.Join(dir, path)
 }
 
-// hasTimeoutErr checks if the error list contains a context.DeadlineExceeded error.
 func hasTimeoutErr(err []error) bool {
 	for i := range err {
 		if errors.Is(err[i], context.DeadlineExceeded) {

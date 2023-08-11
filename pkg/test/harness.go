@@ -489,7 +489,7 @@ func (h *Harness) Run() {
 // Setup spins up the test env based on configuration
 // It can be used to start env which can than be modified prior to running tests, otherwise use Run().
 func (h *Harness) Setup() {
-	rand.New(rand.NewSource(time.Now().UTC().UnixNano()))
+	rand.Seed(time.Now().UTC().UnixNano())
 	h.report = report.NewSuiteCollection(h.TestSuite.Name)
 	h.T.Log("starting setup")
 

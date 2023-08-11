@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/dustin/go-humanize"
-	"github.com/pkg/errors"
 
 	"github.com/kyverno/kuttl/pkg/version"
 )
@@ -41,20 +40,21 @@ func (c *Client) GetByteBuffer(url string) (*bytes.Buffer, error) {
 
 	resp, err := c.Get(url)
 	if err != nil {
-		return buf, errors.Wrapf(err, "failed to fetch %s", url)
+		return buf, err
 	}
-	defer resp.Body.Close()
-
 	if resp.StatusCode != 200 {
 		return buf, fmt.Errorf("failed to fetch %s : %s", url, resp.Status)
 	}
 
 	_, err = io.Copy(buf, resp.Body)
 	if err != nil {
-		return nil, errors.Wrap(err, "error while copying response body")
+		return nil, err
 	}
-
-	return buf, nil
+	err = resp.Body.Close()
+	if err != nil {
+		return nil, fmt.Errorf("error when closing the response body %s", err)
+	}
+	return buf, err
 }
 
 // DownloadFile expects a url with a file and will save that file to the path provided preserving the file name.
@@ -69,7 +69,7 @@ func (c *Client) Download(url string, path string) error {
 	// Get the data
 	resp, err := c.Get(url)
 	if err != nil {
-		return errors.Wrap(err, "failed to perform HTTP GET")
+		return err
 	}
 	defer resp.Body.Close()
 
@@ -79,14 +79,14 @@ func (c *Client) Download(url string, path string) error {
 	}
 	// captures errors other than does not exist
 	if err != nil && !os.IsNotExist(err) {
-		return errors.Wrap(err, "error checking file existence")
+		return err
 	}
 
 	// Create the file with .tmp extension, so that we won't overwrite a
 	// file until it's downloaded fully
 	out, err := os.Create(path + ".tmp")
 	if err != nil {
-		return errors.Wrap(err, "error creating temporary file")
+		return err
 	}
 	defer out.Close()
 
@@ -94,7 +94,7 @@ func (c *Client) Download(url string, path string) error {
 	counter := &writeCounter{Name: filepath.Base(path)}
 	_, err = io.Copy(out, io.TeeReader(resp.Body, counter))
 	if err != nil {
-		return errors.Wrap(err, "error while copying response body to file")
+		return err
 	}
 
 	// The progress use the same line so print a new line once it's finished downloading
@@ -103,7 +103,7 @@ func (c *Client) Download(url string, path string) error {
 	// Rename the tmp file back to the original file
 	err = os.Rename(path+".tmp", path)
 	if err != nil {
-		return errors.Wrap(err, "error renaming temporary file")
+		return err
 	}
 
 	return nil

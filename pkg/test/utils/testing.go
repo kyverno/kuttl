@@ -21,19 +21,25 @@ func RunTests(testName string, testToRun string, parallelism int, testFunc func(
 	testing.Init()
 
 	// Set the verbose test flag to true since we are not using the regular go test CLI.
-	setFlag("test.v", "true")
+	if err := flag.Set("test.v", "true"); err != nil {
+		panic(err)
+	}
 
 	// Set the -run flag on the Go test harness.
 	// See the go test documentation: https://golang.org/pkg/cmd/go/internal/test/
 	if testToRun != "" {
-		setFlag("test.run", fmt.Sprintf("//%s", testToRun))
+		if err := flag.Set("test.run", fmt.Sprintf("//%s", testToRun)); err != nil {
+			panic(err)
+		}
 	}
 
 	parallelismStr := "8"
 	if parallelism != 0 {
 		parallelismStr = fmt.Sprintf("%d", parallelism)
 	}
-	setFlag("test.parallel", parallelismStr)
+	if err := flag.Set("test.parallel", parallelismStr); err != nil {
+		panic(err)
+	}
 
 	os.Exit(testing.MainStart(&testDeps{}, []testing.InternalTest{
 		{
@@ -41,14 +47,6 @@ func RunTests(testName string, testToRun string, parallelism int, testFunc func(
 			F:    testFunc,
 		},
 	}, nil, nil, nil).Run())
-}
-
-// setFlag is a utility function that sets the value of a command-line flag using the flag package.
-// If an error occurs while setting the flag, the function panics with the provided error.
-func setFlag(name, value string) {
-	if err := flag.Set(name, value); err != nil {
-		panic(err)
-	}
 }
 
 // testDeps implements the testDeps interface for MainStart.
@@ -81,11 +79,7 @@ func (testDeps) StopCPUProfile() {
 }
 
 func (testDeps) WriteProfileTo(name string, w io.Writer, debug int) error {
-	prof := pprof.Lookup(name)
-	if prof == nil {
-		return fmt.Errorf("profile %q not found", name)
-	}
-	return prof.WriteTo(w, debug)
+	return pprof.Lookup(name).WriteTo(w, debug)
 }
 
 func (testDeps) ImportPath() string {
