@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -564,11 +563,6 @@ func (s *Step) LoadYAML(file string) error {
 	for _, apply := range s.Apply {
 		if apply.object.GetObjectKind().GroupVersionKind().Kind == "TestStep" {
 			if testStep, ok := apply.object.(*harness.TestStep); ok {
-				// validate yaml files and teststep fields for TestStep objects
-				err := testStepYamlValidate(testStep, s.Dir)
-				if err != nil {
-					return fmt.Errorf("failed to validate TestStep object from %s, error: %v", file, err)
-				}
 				if s.Step != nil {
 					return fmt.Errorf("more than 1 TestStep not allowed in step %q", s.Name)
 				}
@@ -696,50 +690,4 @@ func hasTimeoutErr(err []error) bool {
 		}
 	}
 	return false
-}
-
-func testStepYamlValidate(ts *harness.TestStep, dir string) error {
-	// If apply field is not present, then either command or delete needs to be present,
-	// if both are not specified it should throw an error
-	if len(ts.Apply) == 0 && len(ts.Commands) == 0 && len(ts.Error) == 0 {
-		return fmt.Errorf("if apply field is not specified either command or delete is expected")
-	}
-
-	// Assert and Error fields require Apply field
-	if (len(ts.Assert) != 0 || len(ts.Error) != 0) && len(ts.Apply) == 0 {
-		return fmt.Errorf("cannot have assert or error field when missing apply field")
-	}
-
-	// Validation for referenced field files
-	for _, Apply := range ts.Apply {
-		err := validateFieldFile(Apply.File, dir)
-		if err != nil {
-			return errors.Join(err, fmt.Errorf("error in apply field"))
-		}
-	}
-	for _, Assert := range ts.Assert {
-		err := validateFieldFile(Assert, dir)
-		if err != nil {
-			return errors.Join(err, fmt.Errorf("error in assert field"))
-		}
-	}
-	for _, Error := range ts.Error {
-		err := validateFieldFile(Error, dir)
-		if err != nil {
-			return errors.Join(err, fmt.Errorf("error in error field"))
-		}
-	}
-
-	return nil
-}
-
-// validateFieldFile checks if the reference file exists
-func validateFieldFile(file string, dir string) error {
-	completeFile := filepath.Join(dir, file)
-	_, err := os.Stat(completeFile)
-	if os.IsNotExist(err) {
-		return fmt.Errorf("the file %s specified in the field does not exist", completeFile)
-	}
-
-	return nil
 }
