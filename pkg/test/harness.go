@@ -612,6 +612,16 @@ func (h *Harness) Stop() {
 
 		h.kind = nil
 	}
+
+	h.T.Logf("Total test failures: %d", h.report.Failures)
+	for _, j := range h.report.Testsuite {
+		h.T.Logf("Test suite %s: %d failures", j.Name, j.Failures)
+		for _, v := range j.Testcase {
+			if v.Failure != nil {
+				h.T.Logf("test %s failed: %s", v.Name, v.Failure.Message)
+			}
+		}
+	}
 }
 
 // wraps Test.Fatal in order to clean up harness
