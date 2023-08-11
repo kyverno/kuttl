@@ -399,6 +399,8 @@ func (h *Harness) RunTests() {
 		}
 	}
 
+	failureOccurred := false
+
 	h.T.Run("harness", func(t *testing.T) {
 		for testDir, tests := range realTestSuite {
 			h.T.Logf("testsuite: %s has %d tests", testDir, len(tests))
@@ -428,8 +430,23 @@ func (h *Harness) RunTests() {
 
 					tc := report.NewCase(name)
 					test.Run(t, tc)
+					if tc.Failure != nil {
+						// assuming tc.Failure is set when a test case fails
+						failureOccurred = true
+					}
 					suite.AddTestcase(tc)
+					// Check after every test case if a failure has occurred and the flag is set
+					if failureOccurred && h.TestSuite.StopOnFirstFailure {
+						t.SkipNow()
+						return
+					}
 				})
+				if failureOccurred && h.TestSuite.StopOnFirstFailure {
+					break
+				}
+			}
+			if failureOccurred && h.TestSuite.StopOnFirstFailure {
+				break
 			}
 		}
 	})
