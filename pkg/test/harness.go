@@ -435,7 +435,7 @@ func (h *Harness) RunTests() {
 						failureOccurred = true
 					}
 					suite.AddTestcase(tc)
-					// Check after every test case if a failure has occurred and the flag is set
+					// Check after every test case if a failure has occurred
 					if failureOccurred && h.TestSuite.StopOnFirstFailure {
 						t.SkipNow()
 						return
