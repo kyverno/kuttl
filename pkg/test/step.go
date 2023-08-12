@@ -700,7 +700,7 @@ func hasTimeoutErr(err []error) bool {
 func testStepYamlValidate(ts *harness.TestStep, dir string) error {
 	// If apply field is not present, then either command or delete needs to be present,
 	// if both are not specified it should throw an error
-	if len(ts.Apply) == 0 && len(ts.Commands) == 0 && len(ts.Error) == 0 {
+	if len(ts.Apply) == 0 && len(ts.Commands) == 0 && len(ts.Delete) == 0 {
 		return fmt.Errorf("if apply field is not specified either command or delete is expected")
 	}
 
