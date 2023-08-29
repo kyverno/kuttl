@@ -43,6 +43,10 @@ properties:
     description: If set, do not delete the mocked control plane or kind cluster.
     type: boolean
     default: false
+  stopOnFirstFailure:
+    description: StopOnFirstFailure determines whether the test should stop upon encountering the first failure.
+    type: boolean
+    default: false   
   timeout:
     description: Override the default timeout of 30 seconds (in seconds).
     type: integer

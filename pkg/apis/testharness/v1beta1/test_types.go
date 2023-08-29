@@ -51,6 +51,8 @@ type TestSuite struct {
 	SkipDelete bool `json:"skipDelete"`
 	// If set, do not delete the mocked control plane or kind cluster.
 	SkipClusterDelete bool `json:"skipClusterDelete"`
+	// StopOnFirstFailure determines whether the test should stop upon encountering the first failure.
+	StopOnFirstFailure bool `json:"stopOnFirstFailure"`
 	// Override the default timeout of 30 seconds (in seconds).
 	// +kubebuilder:validation:Format:=int64
 	Timeout int `json:"timeout"`
