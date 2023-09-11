@@ -629,6 +629,7 @@ func (h *Harness) Stop() {
 
 		h.kind = nil
 	}
+	h.DisplayFailedTest()
 }
 
 // wraps Test.Fatal in order to clean up harness
@@ -656,6 +657,30 @@ func (h *Harness) Report() {
 	}
 	if err := h.report.Report(h.TestSuite.ArtifactsDir, h.reportName(), report.Type(h.TestSuite.ReportFormat)); err != nil {
 		h.fatal(fmt.Errorf("fatal error writing report: %v", err))
+	}
+}
+
+func (h *Harness) DisplayFailedTest() {
+	h.logTotalFailures()
+	h.logEachTestSuiteFailures()
+}
+
+func (h *Harness) logTotalFailures() {
+	h.logger.Logf("Total test failures: %d", h.report.Failures)
+}
+
+func (h *Harness) logEachTestSuiteFailures() {
+	for _, suite := range h.report.Testsuite {
+		h.logger.Logf("Test suite %s: %d failures", suite.Name, suite.Failures)
+		h.logTestCaseFailures(suite)
+	}
+}
+
+func (h *Harness) logTestCaseFailures(suite *report.Testsuite) {
+	for _, testCase := range suite.Testcase {
+		if testCase.Failure != nil {
+			h.logger.Logf("test %s failed: %s", testCase.Name, testCase.Failure.Message)
+		}
 	}
 }
 
