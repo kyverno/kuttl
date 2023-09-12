@@ -36,8 +36,6 @@ import (
 	testutils "github.com/kyverno/kuttl/pkg/test/utils"
 )
 
-var failureOccurred = false
-
 // Harness loads and runs tests based on the configuration provided.
 type Harness struct {
 	TestSuite harness.TestSuite
@@ -400,7 +398,7 @@ func (h *Harness) RunTests() {
 			}
 		}
 	}
-
+	var failureOccurred = false
 	h.T.Run("harness", func(t *testing.T) {
 		for testDir, tests := range realTestSuite {
 			h.T.Logf("testsuite: %s has %d tests", testDir, len(tests))
