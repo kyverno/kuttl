@@ -4,7 +4,9 @@ package test
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -337,10 +339,15 @@ func TestApplyExpansion(t *testing.T) {
 	t.Cleanup(func() {
 		os.Unsetenv("TEST_FOO")
 	})
+	dirPath := filepath.Join(t.TempDir(), "step_integration_test_data/assert_expand")
+	err := os.MkdirAll(dirPath, 0755)
+	assert.NoError(t, err)
+	yamlFilePath := filepath.Join(dirPath, "00-step1.yaml")
+	err = ioutil.WriteFile(yamlFilePath, []byte, 0644)
+	assert.NoError(t, err)
 
-	step := Step{Dir: "step_integration_test_data/assert_expand/"}
-	path := "step_integration_test_data/assert_expand/00-step1.yaml"
-	err := step.LoadYAML(path)
+	step := Step{Dir: dirPath}
+	err = step.LoadYAML(yamlFilePath)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(step.Apply))
 }
