@@ -696,8 +696,11 @@ func hasTimeoutErr(err []error) bool {
 }
 
 func validateTestStep(ts *harness.TestStep, baseDir string) error {
-	if len(ts.Apply) == 0 {
-		return fmt.Errorf("the 'Apply' field is required and missing")
+	if len(ts.Apply) == 0 && len(ts.Commands) == 0 && len(ts.Delete) == 0 {
+		return fmt.Errorf("invalid test step configuration: at least one of 'apply', 'command', or 'delete' must be specified")
+	}
+	if (len(ts.Assert) != 0 || len(ts.Error) != 0) && len(ts.Apply) == 0 {
+		return fmt.Errorf("the 'apply' field is required when 'assert' or 'error' fields are present")
 	}
 
 	// Check if referenced files in Apply exist
