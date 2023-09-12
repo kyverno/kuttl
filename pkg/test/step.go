@@ -696,7 +696,6 @@ func hasTimeoutErr(err []error) bool {
 }
 
 func validateTestStep(ts *harness.TestStep, baseDir string) error {
-
 	// Check if referenced files in Apply exist
 	for _, apply := range ts.Apply {
 		path := filepath.Join(baseDir, apply.File)
