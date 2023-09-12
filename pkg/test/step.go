@@ -742,7 +742,7 @@ func checkYAMLError(path string) error {
 	}
 
 	var data map[string]interface{}
-	if err := yaml.Unmarshal(content, &data); err != nil {
+	if err := yaml.UnmarshalStrict(content, &data); err != nil {
 		return fmt.Errorf("YAML indentation or structural error in file %s: %v", path, err)
 	}
 
