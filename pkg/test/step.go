@@ -568,7 +568,7 @@ func (s *Step) LoadYAML(file string) error {
 					return fmt.Errorf("failed to validate TestStep object from %s: %v", file, err)
 				}
 				// Check for YAML errors in the TestStep file
-				if err := checkYAMLError(file, true); err != nil {
+				if err := checkYAMLError(file); err != nil {
 					return fmt.Errorf("failed to check YAML in TestStep file %s: %v", file, err)
 				}
 				if s.Step != nil {
@@ -706,7 +706,7 @@ func validateTestStep(ts *harness.TestStep, baseDir string) error {
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			return fmt.Errorf("referenced file in Apply does not exist: %s", path)
 		}
-		if err := checkYAMLError(path, false); err != nil {
+		if err := checkYAMLError(path); err != nil {
 			return err
 		}
 	}
@@ -716,7 +716,7 @@ func validateTestStep(ts *harness.TestStep, baseDir string) error {
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			return fmt.Errorf("referenced file in Assert does not exist: %s", path)
 		}
-		if err := checkYAMLError(path, false); err != nil {
+		if err := checkYAMLError(path); err != nil {
 			return err
 		}
 	}
@@ -726,7 +726,7 @@ func validateTestStep(ts *harness.TestStep, baseDir string) error {
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			return fmt.Errorf("referenced file in Error does not exist: %s", path)
 		}
-		if err := checkYAMLError(path, false); err != nil {
+		if err := checkYAMLError(path); err != nil {
 			return err
 		}
 	}
@@ -734,37 +734,50 @@ func validateTestStep(ts *harness.TestStep, baseDir string) error {
 	return nil
 }
 
-func checkYAMLError(path string, isTestStepFile bool) error {
+func checkYAMLError(path string) error {
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("error reading file %s: %v", path, err)
 	}
 
-	var data map[string]interface{}
-	if err := yaml.UnmarshalStrict(content, &data); err != nil {
-		return fmt.Errorf("YAML indentation or structural error in file %s: %v", path, err)
-	}
-
-	// check for unknown field in TestStep file
-	if isTestStepFile {
-		allowedFields := map[string]bool{
-			"apply":      true,
-			"assert":     true,
-			"error":      true,
-			"delete":     true,
-			"index":      true,
-			"commands":   true,
-			"kubeconfig": true,
-			"unitTest":   true,
-			"metadata":   true,
-			"kind":       true,
-			"apiVersion": true,
+	manifests := strings.Split(string(content), "---")
+	for _, manifest := range manifests {
+		manifest = strings.TrimSpace(manifest)
+		if manifest == "" {
+			continue
 		}
-		for key := range data {
-			if _, ok := allowedFields[key]; !ok {
-				return fmt.Errorf("unexpected field %s in TestStep file %s", key, path)
+
+		var data map[string]interface{}
+		if err := yaml.UnmarshalStrict([]byte(manifest), &data); err != nil {
+			return fmt.Errorf("YAML indentation or structural error in file %s: %v", path, err)
+		}
+
+		kind, ok := data["kind"].(string)
+		if !ok || kind == "" {
+			continue
+		}
+
+		if kind == "TestStep" {
+			allowedFields := map[string]bool{
+				"apply":      true,
+				"assert":     true,
+				"error":      true,
+				"delete":     true,
+				"index":      true,
+				"commands":   true,
+				"kubeconfig": true,
+				"unitTest":   true,
+				"metadata":   true,
+				"kind":       true,
+				"apiVersion": true,
+			}
+			for key := range data {
+				if _, ok := allowedFields[key]; !ok {
+					return fmt.Errorf("unexpected field %s in TestStep manifest in file %s", key, path)
+				}
 			}
 		}
 	}
+
 	return nil
 }
