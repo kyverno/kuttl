@@ -567,6 +567,10 @@ func (s *Step) LoadYAML(file string) error {
 				if err := validateTestStep(testStep, s.Dir); err != nil {
 					return fmt.Errorf("failed to validate TestStep object from %s: %v", file, err)
 				}
+				// Check for YAML errors in the TestStep file
+				if err := checkYAMLError(file, true); err != nil {
+					return fmt.Errorf("failed to check YAML in TestStep file %s: %v", file, err)
+				}
 				if s.Step != nil {
 					return fmt.Errorf("more than 1 TestStep not allowed in step %q", s.Name)
 				}
@@ -702,7 +706,7 @@ func validateTestStep(ts *harness.TestStep, baseDir string) error {
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			return fmt.Errorf("referenced file in Apply does not exist: %s", path)
 		}
-		if err := checkYAMLError(path); err != nil {
+		if err := checkYAMLError(path, false); err != nil {
 			return err
 		}
 	}
@@ -712,7 +716,7 @@ func validateTestStep(ts *harness.TestStep, baseDir string) error {
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			return fmt.Errorf("referenced file in Assert does not exist: %s", path)
 		}
-		if err := checkYAMLError(path); err != nil {
+		if err := checkYAMLError(path, false); err != nil {
 			return err
 		}
 	}
@@ -722,7 +726,7 @@ func validateTestStep(ts *harness.TestStep, baseDir string) error {
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			return fmt.Errorf("referenced file in Error does not exist: %s", path)
 		}
-		if err := checkYAMLError(path); err != nil {
+		if err := checkYAMLError(path, false); err != nil {
 			return err
 		}
 	}
@@ -730,8 +734,7 @@ func validateTestStep(ts *harness.TestStep, baseDir string) error {
 	return nil
 }
 
-// checkYAMLError checks for YAML structural or indentation errors in the given file path.
-func checkYAMLError(path string) error {
+func checkYAMLError(path string, isTestStepFile bool) error {
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("error reading file %s: %v", path, err)
@@ -742,5 +745,26 @@ func checkYAMLError(path string) error {
 		return fmt.Errorf("YAML indentation or structural error in file %s: %v", path, err)
 	}
 
+	// check for unknown field in TestStep file
+	if isTestStepFile {
+		allowedFields := map[string]bool{
+			"apply":      true,
+			"assert":     true,
+			"error":      true,
+			"delete":     true,
+			"index":      true,
+			"commands":   true,
+			"kubeconfig": true,
+			"unitTest":   true,
+			"metadata":   true,
+			"kind":       true,
+			"apiVersion": true,
+		}
+		for key := range data {
+			if _, ok := allowedFields[key]; !ok {
+				return fmt.Errorf("unexpected field %s in TestStep file %s", key, path)
+			}
+		}
+	}
 	return nil
 }
