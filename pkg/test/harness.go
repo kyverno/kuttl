@@ -36,6 +36,8 @@ import (
 	testutils "github.com/kyverno/kuttl/pkg/test/utils"
 )
 
+var failureOccurred = false
+
 // Harness loads and runs tests based on the configuration provided.
 type Harness struct {
 	TestSuite harness.TestSuite
@@ -399,12 +401,14 @@ func (h *Harness) RunTests() {
 		}
 	}
 
-	failureOccurred := false
-
 	h.T.Run("harness", func(t *testing.T) {
 		for testDir, tests := range realTestSuite {
 			h.T.Logf("testsuite: %s has %d tests", testDir, len(tests))
 			suite := h.report.NewSuite(testDir)
+			if failureOccurred && h.TestSuite.StopOnFirstFailure {
+				t.SkipNow()
+				break
+			}
 			for _, test := range tests {
 				test := test
 
@@ -420,7 +424,10 @@ func (h *Harness) RunTests() {
 				if h.TestSuite.FullName {
 					name = path.Join(strings.Trim(strings.Trim(testDir, "."), "/"), name)
 				}
-
+				if failureOccurred && h.TestSuite.StopOnFirstFailure {
+					t.SkipNow()
+					break
+				}
 				t.Run(name, func(t *testing.T) {
 					// testing.T.Parallel may block, so run it before we read time for our
 					// elapsed time calculations.
@@ -429,24 +436,18 @@ func (h *Harness) RunTests() {
 					test.Logger = testutils.NewTestLogger(t, name)
 
 					tc := report.NewCase(name)
+					// Check before every test case if a failure has occurred
+					if failureOccurred && h.TestSuite.StopOnFirstFailure {
+						t.SkipNow()
+						return
+					}
 					test.Run(t, tc)
 					if tc.Failure != nil {
 						// assuming tc.Failure is set when a test case fails
 						failureOccurred = true
 					}
 					suite.AddTestcase(tc)
-					// Check after every test case if a failure has occurred
-					if failureOccurred && h.TestSuite.StopOnFirstFailure {
-						t.SkipNow()
-						return
-					}
 				})
-				if failureOccurred && h.TestSuite.StopOnFirstFailure {
-					break
-				}
-			}
-			if failureOccurred && h.TestSuite.StopOnFirstFailure {
-				break
 			}
 		}
 	})
