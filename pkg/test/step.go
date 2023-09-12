@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -740,15 +741,13 @@ func checkYAMLError(path string) error {
 		return fmt.Errorf("error reading file %s: %v", path, err)
 	}
 
-	manifests := strings.Split(string(content), "---")
-	for _, manifest := range manifests {
-		manifest = strings.TrimSpace(manifest)
-		if manifest == "" {
-			continue
-		}
-
+	decoder := yaml.NewDecoder(strings.NewReader(string(content)))
+	decoder.SetStrict(true)
+	for {
 		var data map[string]interface{}
-		if err := yaml.UnmarshalStrict([]byte(manifest), &data); err != nil {
+		if err := decoder.Decode(&data); err == io.EOF {
+			break
+		} else if err != nil {
 			return fmt.Errorf("YAML indentation or structural error in file %s: %v", path, err)
 		}
 
