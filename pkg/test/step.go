@@ -696,9 +696,6 @@ func hasTimeoutErr(err []error) bool {
 }
 
 func validateTestStep(ts *harness.TestStep, baseDir string) error {
-	if (len(ts.Assert) != 0 || len(ts.Error) != 0) && len(ts.Apply) == 0 {
-		return fmt.Errorf("the 'apply' field is required when 'assert' or 'error' fields are present")
-	}
 
 	// Check if referenced files in Apply exist
 	for _, apply := range ts.Apply {
