@@ -343,7 +343,7 @@ func TestApplyExpansion(t *testing.T) {
 	err := os.MkdirAll(dirPath, 0755)
 	assert.NoError(t, err)
 	yamlFilePath := filepath.Join(dirPath, "00-step1.yaml")
-	err = ioutil.WriteFile(yamlFilePath, []byte, 0644)
+	err = ioutil.WriteFile(yamlFilePath, []byte{}, 0644)
 	assert.NoError(t, err)
 
 	step := Step{Dir: dirPath}
