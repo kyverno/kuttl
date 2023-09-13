@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -12,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"gopkg.in/yaml.v2"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -568,10 +566,6 @@ func (s *Step) LoadYAML(file string) error {
 				if err := validateTestStep(testStep, s.Dir); err != nil {
 					return fmt.Errorf("failed to validate TestStep object from %s: %v", file, err)
 				}
-				// Check for YAML errors in the TestStep file
-				if err := checkYAMLError(file); err != nil {
-					return fmt.Errorf("failed to check YAML in TestStep file %s: %v", file, err)
-				}
 				if s.Step != nil {
 					return fmt.Errorf("more than 1 TestStep not allowed in step %q", s.Name)
 				}
@@ -707,9 +701,6 @@ func validateTestStep(ts *harness.TestStep, baseDir string) error {
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			return fmt.Errorf("referenced file in Apply does not exist: %s", path)
 		}
-		if err := checkYAMLError(path); err != nil {
-			return err
-		}
 	}
 	// Check if referenced files in  Assert  exist
 	for _, assert := range ts.Assert {
@@ -717,64 +708,12 @@ func validateTestStep(ts *harness.TestStep, baseDir string) error {
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			return fmt.Errorf("referenced file in Assert does not exist: %s", path)
 		}
-		if err := checkYAMLError(path); err != nil {
-			return err
-		}
 	}
 	// Check if referenced files in  Error exist
 	for _, errorPath := range ts.Error {
 		path := filepath.Join(baseDir, errorPath)
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			return fmt.Errorf("referenced file in Error does not exist: %s", path)
-		}
-		if err := checkYAMLError(path); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func checkYAMLError(path string) error {
-	content, err := os.ReadFile(path)
-	if err != nil {
-		return fmt.Errorf("error reading file %s: %v", path, err)
-	}
-
-	decoder := yaml.NewDecoder(strings.NewReader(string(content)))
-	decoder.SetStrict(true)
-	for {
-		var data map[string]interface{}
-		if err := decoder.Decode(&data); err == io.EOF {
-			break
-		} else if err != nil {
-			return fmt.Errorf("YAML indentation or structural error in file %s: %v", path, err)
-		}
-
-		kind, ok := data["kind"].(string)
-		if !ok || kind == "" {
-			continue
-		}
-
-		if kind == "TestStep" {
-			allowedFields := map[string]bool{
-				"apply":      true,
-				"assert":     true,
-				"error":      true,
-				"delete":     true,
-				"index":      true,
-				"commands":   true,
-				"kubeconfig": true,
-				"unitTest":   true,
-				"metadata":   true,
-				"kind":       true,
-				"apiVersion": true,
-			}
-			for key := range data {
-				if _, ok := allowedFields[key]; !ok {
-					return fmt.Errorf("unexpected field %s in TestStep manifest in file %s", key, path)
-				}
-			}
 		}
 	}
 
