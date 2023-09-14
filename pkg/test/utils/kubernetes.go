@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	wildcard "github.com/IGLOU-EU/go-wildcard"
+	"github.com/IGLOU-EU/go-wildcard"
 	"github.com/google/shlex"
 	"github.com/kyverno/kuttl/pkg/apis"
 	harness "github.com/kyverno/kuttl/pkg/apis/testharness/v1beta1"
@@ -1105,18 +1105,23 @@ func RunCommand(ctx context.Context, namespace string, cmd harness.Command, cwd 
 
 	err = builtCmd.Wait()
 
-	// Checking the command Stdout and Stderr against the expected values
-	if cmd.Output.Stdout.Equals != "" && !wildcard.Match(cmd.Output.Stdout.Equals, stdoutOutput.String()) {
+	if cmd.Output.Stdout.Equals != "" && stdoutOutput.String() != cmd.Output.Stdout.Equals {
 		return nil, fmt.Errorf("expected exact stdout: %s, got: %s", cmd.Output.Stdout.Equals, stdoutOutput.String())
 	}
-	if cmd.Output.Stdout.Contains != "" && !wildcard.Match("*"+cmd.Output.Stdout.Contains+"*", stdoutOutput.String()) {
+	if cmd.Output.Stdout.Contains != "" && !strings.Contains(stdoutOutput.String(), cmd.Output.Stdout.Contains) {
 		return nil, fmt.Errorf("expected stdout to contain: %s, but it did not", cmd.Output.Stdout.Contains)
 	}
-	if cmd.Output.Stderr.Equals != "" && !wildcard.Match(cmd.Output.Stderr.Equals, stderrOutput.String()) {
+	if cmd.Output.Stdout.Wildcard != "" && !wildcard.Match(cmd.Output.Stdout.Wildcard, stdoutOutput.String()) {
+		return nil, fmt.Errorf("stdout did not match wildcard pattern: %s", cmd.Output.Stdout.Wildcard)
+	}
+	if cmd.Output.Stderr.Equals != "" && stderrOutput.String() != cmd.Output.Stderr.Equals {
 		return nil, fmt.Errorf("expected exact stderr: %s, got: %s", cmd.Output.Stderr.Equals, stderrOutput.String())
 	}
-	if cmd.Output.Stderr.Contains != "" && !wildcard.Match("*"+cmd.Output.Stderr.Contains+"*", stderrOutput.String()) {
+	if cmd.Output.Stderr.Contains != "" && !strings.Contains(stderrOutput.String(), cmd.Output.Stderr.Contains) {
 		return nil, fmt.Errorf("expected stderr to contain: %s, but it did not", cmd.Output.Stderr.Contains)
+	}
+	if cmd.Output.Stderr.Wildcard != "" && !wildcard.Match(cmd.Output.Stderr.Wildcard, stderrOutput.String()) {
+		return nil, fmt.Errorf("stderr did not match wildcard pattern: %s", cmd.Output.Stderr.Wildcard)
 	}
 
 	if errors.As(err, &exerr) && cmd.IgnoreFailure {

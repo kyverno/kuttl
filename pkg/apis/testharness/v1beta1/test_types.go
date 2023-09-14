@@ -223,6 +223,10 @@ type ExpectedOutput struct {
 	// Contains checks if the command's output includes a specified substring.
 	// The validation fails if the specified substring is not found in the output.
 	Contains string `json:"contains"`
+
+	// Wildcard allows for wildcard pattern matching against the command's output.
+	// The validation fails if the command's output doesn't match the specified wildcard pattern.
+	Wildcard string `json:"wildcard"`
 }
 
 // TestCollector are post assert / error commands that allow for the collection of information sent to the test log.
