@@ -19,7 +19,11 @@ import (
 	"testing"
 	"time"
 
+	wildcard "github.com/IGLOU-EU/go-wildcard"
 	"github.com/google/shlex"
+	"github.com/kyverno/kuttl/pkg/apis"
+	harness "github.com/kyverno/kuttl/pkg/apis/testharness/v1beta1"
+	"github.com/kyverno/kuttl/pkg/env"
 	"github.com/pmezard/go-difflib/difflib"
 	"github.com/spf13/pflag"
 	appsv1 "k8s.io/api/apps/v1"
@@ -53,10 +57,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-
-	"github.com/kyverno/kuttl/pkg/apis"
-	harness "github.com/kyverno/kuttl/pkg/apis/testharness/v1beta1"
-	"github.com/kyverno/kuttl/pkg/env"
 )
 
 // ensure that we only add to the scheme once.
@@ -1075,9 +1075,14 @@ func RunCommand(ctx context.Context, namespace string, cmd harness.Command, cwd 
 	logger.Logf("running command: %v", builtCmd.Args)
 
 	builtCmd.Dir = cwd
-	if !cmd.SkipLogOutput {
-		builtCmd.Stdout = stdout
-		builtCmd.Stderr = stderr
+	// Capturing the command output
+	var stdoutOutput, stderrOutput strings.Builder
+	if cmd.SkipLogOutput {
+		builtCmd.Stdout = &stdoutOutput
+		builtCmd.Stderr = &stderrOutput
+	} else {
+		builtCmd.Stdout = io.MultiWriter(stdout, &stdoutOutput)
+		builtCmd.Stderr = io.MultiWriter(stderr, &stderrOutput)
 	}
 	builtCmd.Env = os.Environ()
 	for key, value := range kuttlENV {
@@ -1099,6 +1104,21 @@ func RunCommand(ctx context.Context, namespace string, cmd harness.Command, cwd 
 	}
 
 	err = builtCmd.Wait()
+
+	// Checking the command Stdout and Stderr against the expected values
+	if cmd.Output.Stdout.Equals != "" && !wildcard.Match(cmd.Output.Stdout.Equals, stdoutOutput.String()) {
+		return nil, fmt.Errorf("expected exact stdout: %s, got: %s", cmd.Output.Stdout.Equals, stdoutOutput.String())
+	}
+	if cmd.Output.Stdout.Contains != "" && !wildcard.Match("*"+cmd.Output.Stdout.Contains+"*", stdoutOutput.String()) {
+		return nil, fmt.Errorf("expected stdout to contain: %s, but it did not", cmd.Output.Stdout.Contains)
+	}
+	if cmd.Output.Stderr.Equals != "" && !wildcard.Match(cmd.Output.Stderr.Equals, stderrOutput.String()) {
+		return nil, fmt.Errorf("expected exact stderr: %s, got: %s", cmd.Output.Stderr.Equals, stderrOutput.String())
+	}
+	if cmd.Output.Stderr.Contains != "" && !wildcard.Match("*"+cmd.Output.Stderr.Contains+"*", stderrOutput.String()) {
+		return nil, fmt.Errorf("expected stderr to contain: %s, but it did not", cmd.Output.Stderr.Contains)
+	}
+
 	if errors.As(err, &exerr) && cmd.IgnoreFailure {
 		return nil, nil
 	}

@@ -3,6 +3,7 @@ module github.com/kyverno/kuttl
 go 1.18
 
 require (
+	github.com/IGLOU-EU/go-wildcard v1.0.3
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/docker/docker v20.10.17+incompatible
 	github.com/dustin/go-humanize v1.0.0

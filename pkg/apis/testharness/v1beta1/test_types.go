@@ -186,6 +186,9 @@ type ObjectReference struct {
 type Command struct {
 	// The command and argument to run as a string.
 	Command string `json:"command"`
+	// Output defines the expected output criteria for the command.
+	// It can check if the command's output equals or contains specific strings.
+	Output CommandOutput `json:"output"`
 	// If set, the `--namespace` flag will be appended to the command with the namespace to use.
 	Namespaced bool `json:"namespaced"`
 	// Ability to run a shell script from TestStep (without a script file)
@@ -200,6 +203,26 @@ type Command struct {
 	Timeout int `json:"timeout"`
 	// If set, the output from the command is NOT logged.  Useful for sensitive logs or to reduce noise.
 	SkipLogOutput bool `json:"skipLogOutput"`
+}
+
+// CommandOutput encapsulates expected outputs for stdout and stderr streams.
+type CommandOutput struct {
+	// Stdout contains the expected output criteria for the standard output.
+	Stdout ExpectedOutput `json:"stdout"`
+	// Stderr contains the expected output criteria for the standard error.
+	Stderr ExpectedOutput `json:"stderr"`
+}
+
+// ExpectedOutput defines the criteria that command output should meet.
+// It allows tests to validate if the output matches specific conditions, enhancing the robustness of test validations.
+type ExpectedOutput struct {
+	// Equals is an exact string that the command's output should match.
+	// If the command's output is different, the validation will fail.
+	Equals string `json:"equals"`
+
+	// Contains checks if the command's output includes a specified substring.
+	// The validation fails if the specified substring is not found in the output.
+	Contains string `json:"contains"`
 }
 
 // TestCollector are post assert / error commands that allow for the collection of information sent to the test log.
