@@ -11,9 +11,9 @@ import (
 type MatchType string
 
 const (
-	MatchEquals   MatchType = "equals"
-	MatchContains MatchType = "contains"
-	MatchWildcard MatchType = "wildcard"
+	MatchEquals   MatchType = "Equals"
+	MatchContains MatchType = "Contains"
+	MatchWildcard MatchType = "Wildcard"
 )
 
 // Create embedded struct to implement custom DeepCopyInto method
@@ -224,7 +224,7 @@ type CommandOutput struct {
 // ExpectedOutput defines the criteria that command output should meet.
 type ExpectedOutput struct {
 	// MatchType is the type of match that should be applied for validation.
-	// This could be "equals", "contains", or "wildcard".
+	// This could be "Equals", "Contains", or "Wildcard".
 	MatchType MatchType `json:"match"`
 	// Value is the expected value or pattern that should be matched against the command's output.
 	ExpectedValue string `json:"expected"`
