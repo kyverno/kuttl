@@ -1106,23 +1106,38 @@ func RunCommand(ctx context.Context, namespace string, cmd harness.Command, cwd 
 
 	err = builtCmd.Wait()
 
-	if cmd.Output.Stdout.Equals != "" && stdoutOutput.String() != cmd.Output.Stdout.Equals {
-		return nil, fmt.Errorf("expected exact stdout: %s, got: %s", cmd.Output.Stdout.Equals, stdoutOutput.String())
+	// for stdout and stderr, we need to check the match type and expected value
+	switch strings.ToLower(cmd.Output.Stdout.MatchType) {
+	case "equals", "equal":
+		if cmd.Output.Stdout.ExpectedValue != "" && stdoutOutput.String() != cmd.Output.Stdout.ExpectedValue {
+			return nil, fmt.Errorf("expected exact stdout: %s, got: %s", cmd.Output.Stdout.ExpectedValue, stdoutOutput.String())
+		}
+	case "contains", "contain":
+		if cmd.Output.Stdout.ExpectedValue != "" && !strings.Contains(stdoutOutput.String(), cmd.Output.Stdout.ExpectedValue) {
+			return nil, fmt.Errorf("expected stdout to contain: %s, but it did not", cmd.Output.Stdout.ExpectedValue)
+		}
+	case "wildcard":
+		if cmd.Output.Stdout.ExpectedValue != "" && !wildcard.Match(cmd.Output.Stdout.ExpectedValue, stdoutOutput.String()) {
+			return nil, fmt.Errorf("stdout did not match wildcard pattern: %s", cmd.Output.Stdout.ExpectedValue)
+		}
+	default:
+		return nil, fmt.Errorf("invalid stdout match type: %s", cmd.Output.Stdout.MatchType)
 	}
-	if cmd.Output.Stdout.Contains != "" && !strings.Contains(stdoutOutput.String(), cmd.Output.Stdout.Contains) {
-		return nil, fmt.Errorf("expected stdout to contain: %s, but it did not", cmd.Output.Stdout.Contains)
-	}
-	if cmd.Output.Stdout.Wildcard != "" && !wildcard.Match(cmd.Output.Stdout.Wildcard, stdoutOutput.String()) {
-		return nil, fmt.Errorf("stdout did not match wildcard pattern: %s", cmd.Output.Stdout.Wildcard)
-	}
-	if cmd.Output.Stderr.Equals != "" && stderrOutput.String() != cmd.Output.Stderr.Equals {
-		return nil, fmt.Errorf("expected exact stderr: %s, got: %s", cmd.Output.Stderr.Equals, stderrOutput.String())
-	}
-	if cmd.Output.Stderr.Contains != "" && !strings.Contains(stderrOutput.String(), cmd.Output.Stderr.Contains) {
-		return nil, fmt.Errorf("expected stderr to contain: %s, but it did not", cmd.Output.Stderr.Contains)
-	}
-	if cmd.Output.Stderr.Wildcard != "" && !wildcard.Match(cmd.Output.Stderr.Wildcard, stderrOutput.String()) {
-		return nil, fmt.Errorf("stderr did not match wildcard pattern: %s", cmd.Output.Stderr.Wildcard)
+	switch strings.ToLower(cmd.Output.Stderr.MatchType) {
+	case "equals", "equal":
+		if cmd.Output.Stderr.ExpectedValue != "" && stderrOutput.String() != cmd.Output.Stderr.ExpectedValue {
+			return nil, fmt.Errorf("expected exact stderr: %s, got: %s", cmd.Output.Stderr.ExpectedValue, stderrOutput.String())
+		}
+	case "contains", "contain":
+		if cmd.Output.Stderr.ExpectedValue != "" && !strings.Contains(stderrOutput.String(), cmd.Output.Stderr.ExpectedValue) {
+			return nil, fmt.Errorf("expected stderr to contain: %s, but it did not", cmd.Output.Stderr.ExpectedValue)
+		}
+	case "wildcard":
+		if cmd.Output.Stderr.ExpectedValue != "" && !wildcard.Match(cmd.Output.Stderr.ExpectedValue, stderrOutput.String()) {
+			return nil, fmt.Errorf("stderr did not match wildcard pattern: %s", cmd.Output.Stderr.ExpectedValue)
+		}
+	default:
+		return nil, fmt.Errorf("invalid stderr match type: %s", cmd.Output.Stderr.MatchType)
 	}
 
 	if errors.As(err, &exerr) && cmd.IgnoreFailure {

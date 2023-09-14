@@ -214,19 +214,12 @@ type CommandOutput struct {
 }
 
 // ExpectedOutput defines the criteria that command output should meet.
-// It allows tests to validate if the output matches specific conditions, enhancing the robustness of test validations.
 type ExpectedOutput struct {
-	// Equals is an exact string that the command's output should match.
-	// If the command's output is different, the validation will fail.
-	Equals string `json:"equals"`
-
-	// Contains checks if the command's output includes a specified substring.
-	// The validation fails if the specified substring is not found in the output.
-	Contains string `json:"contains"`
-
-	// Wildcard allows for wildcard pattern matching against the command's output.
-	// The validation fails if the command's output doesn't match the specified wildcard pattern.
-	Wildcard string `json:"wildcard"`
+	// MatchType is the type of match that should be applied for validation.
+	// This could be "equals", "contains", or "wildcard".
+	MatchType string `json:"match"`
+	// Value is the expected value or pattern that should be matched against the command's output.
+	ExpectedValue string `json:"expected"`
 }
 
 // TestCollector are post assert / error commands that allow for the collection of information sent to the test log.
