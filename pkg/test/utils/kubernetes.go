@@ -19,7 +19,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/IGLOU-EU/go-wildcard"
 	"github.com/google/shlex"
 	"github.com/pmezard/go-difflib/difflib"
 	"github.com/spf13/pflag"
@@ -1113,47 +1112,11 @@ func RunCommand(ctx context.Context, namespace string, cmd harness.Command, cwd 
 		return nil, fmt.Errorf("command %q exceeded %v sec timeout, %w", cmd.Command, timeout, cmdCtx.Err())
 	}
 
-	err1 := validateCommandOutput(cmd.Output, stdoutOutput, stderrOutput)
+	err1 := cmd.Output.ValidateCommandOutput(stdoutOutput, stderrOutput)
 	if err1 != nil {
 		return nil, err1
 	}
 	return nil, err
-}
-
-func validateCommandOutput(cmdOutput harness.CommandOutput, stdoutOutput, stderrOutput strings.Builder) error {
-	if err := validateOutput("stdout", cmdOutput.Stdout, stdoutOutput.String()); err != nil {
-		return err
-	}
-
-	return validateOutput("stderr", cmdOutput.Stderr, stderrOutput.String())
-}
-
-func validateOutput(outputType string, expectedOutput *harness.ExpectedOutput, actualValue string) error {
-	if expectedOutput == nil || expectedOutput.ExpectedValue == "" {
-		return nil
-	}
-	expectedValue := expectedOutput.ExpectedValue
-	switch expectedOutput.MatchType {
-	case harness.MatchEquals:
-		if actualValue != expectedValue {
-			return fmt.Errorf("expected exact %s: %s, got: %s", outputType, expectedValue, actualValue)
-		}
-
-	case harness.MatchContains:
-		if !strings.Contains(actualValue, expectedValue) {
-			return fmt.Errorf("expected %s to contain: %s, but it did not", outputType, expectedValue)
-		}
-
-	case harness.MatchWildcard:
-		if !wildcard.Match(expectedValue, actualValue) {
-			return fmt.Errorf("%s did not match wildcard pattern: %s", outputType, expectedValue)
-		}
-
-	default:
-		return fmt.Errorf("invalid %s match type: %s", outputType, expectedOutput.MatchType)
-	}
-
-	return nil
 }
 
 func kubeconfigPath(actualDir, override string) string {
