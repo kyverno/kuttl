@@ -412,7 +412,7 @@ func ConvertUnstructured(in client.Object) (client.Object, error) {
 		return in, nil
 	}
 
-	err = runtime.DefaultUnstructuredConverter.FromUnstructured(unstruct, converted)
+	err = runtime.DefaultUnstructuredConverter.FromUnstructuredWithValidation(unstruct, converted, true)
 	if err != nil {
 		return nil, fmt.Errorf("error converting %s from unstructured error: %w", ResourceID(in), err)
 	}

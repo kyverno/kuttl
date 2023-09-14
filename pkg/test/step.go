@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -561,6 +562,10 @@ func (s *Step) LoadYAML(file string) error {
 	for _, apply := range s.Apply {
 		if apply.object.GetObjectKind().GroupVersionKind().Kind == "TestStep" {
 			if testStep, ok := apply.object.(*harness.TestStep); ok {
+				// Validate TestStep
+				if err := validateTestStep(testStep, s.Dir); err != nil {
+					return fmt.Errorf("failed to validate TestStep object from %s: %v", file, err)
+				}
 				if s.Step != nil {
 					return fmt.Errorf("more than 1 TestStep not allowed in step %q", s.Name)
 				}
@@ -687,4 +692,30 @@ func hasTimeoutErr(err []error) bool {
 		}
 	}
 	return false
+}
+
+func validateTestStep(ts *harness.TestStep, baseDir string) error {
+	// Check if referenced files in Apply exist
+	for _, apply := range ts.Apply {
+		path := filepath.Join(baseDir, apply.File)
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			return fmt.Errorf("referenced file in Apply does not exist: %s", path)
+		}
+	}
+	// Check if referenced files in  Assert  exist
+	for _, assert := range ts.Assert {
+		path := filepath.Join(baseDir, assert)
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			return fmt.Errorf("referenced file in Assert does not exist: %s", path)
+		}
+	}
+	// Check if referenced files in  Error exist
+	for _, errorPath := range ts.Error {
+		path := filepath.Join(baseDir, errorPath)
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			return fmt.Errorf("referenced file in Error does not exist: %s", path)
+		}
+	}
+
+	return nil
 }
