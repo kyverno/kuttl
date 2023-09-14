@@ -21,9 +21,6 @@ import (
 
 	"github.com/IGLOU-EU/go-wildcard"
 	"github.com/google/shlex"
-	"github.com/kyverno/kuttl/pkg/apis"
-	harness "github.com/kyverno/kuttl/pkg/apis/testharness/v1beta1"
-	"github.com/kyverno/kuttl/pkg/env"
 	"github.com/pmezard/go-difflib/difflib"
 	"github.com/spf13/pflag"
 	appsv1 "k8s.io/api/apps/v1"
@@ -57,6 +54,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
+
+	"github.com/kyverno/kuttl/pkg/apis"
+	harness "github.com/kyverno/kuttl/pkg/apis/testharness/v1beta1"
+	"github.com/kyverno/kuttl/pkg/env"
 )
 
 // ensure that we only add to the scheme once.
