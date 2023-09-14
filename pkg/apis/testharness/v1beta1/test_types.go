@@ -8,6 +8,14 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+type MatchType string
+
+const (
+	MatchEquals   MatchType = "equals"
+	MatchContains MatchType = "contains"
+	MatchWildcard MatchType = "wildcard"
+)
+
 // Create embedded struct to implement custom DeepCopyInto method
 type RestConfig struct {
 	RC *rest.Config
@@ -208,16 +216,16 @@ type Command struct {
 // CommandOutput encapsulates expected outputs for stdout and stderr streams.
 type CommandOutput struct {
 	// Stdout contains the expected output criteria for the standard output.
-	Stdout ExpectedOutput `json:"stdout"`
+	Stdout *ExpectedOutput `json:"stdout,omitempty"`
 	// Stderr contains the expected output criteria for the standard error.
-	Stderr ExpectedOutput `json:"stderr"`
+	Stderr *ExpectedOutput `json:"stderr,omitempty"`
 }
 
 // ExpectedOutput defines the criteria that command output should meet.
 type ExpectedOutput struct {
 	// MatchType is the type of match that should be applied for validation.
 	// This could be "equals", "contains", or "wildcard".
-	MatchType string `json:"match"`
+	MatchType MatchType `json:"match"`
 	// Value is the expected value or pattern that should be matched against the command's output.
 	ExpectedValue string `json:"expected"`
 }
