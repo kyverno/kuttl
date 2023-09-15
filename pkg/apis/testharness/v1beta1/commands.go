@@ -28,7 +28,11 @@ func (c *CommandOutput) ValidateCommandOutput(stdoutOutput, stderrOutput strings
 
 func (e *ExpectedOutput) validateOutput(outputType string, actualValue string) error {
 	expectedValue := e.ExpectedValue
-	switch e.MatchType {
+	matchType := e.MatchType
+	if matchType == "" {
+		matchType = MatchEquals
+	}
+	switch matchType {
 	case MatchContains:
 		if !strings.Contains(actualValue, expectedValue) {
 			return fmt.Errorf("expected %s to contain: %s, but it did not", outputType, expectedValue)
