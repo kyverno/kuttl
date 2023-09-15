@@ -1112,9 +1112,11 @@ func RunCommand(ctx context.Context, namespace string, cmd harness.Command, cwd 
 		return nil, fmt.Errorf("command %q exceeded %v sec timeout, %w", cmd.Command, timeout, cmdCtx.Err())
 	}
 
-	err1 := cmd.Output.ValidateCommandOutput(stdoutOutput, stderrOutput)
-	if err1 != nil {
-		return nil, err1
+	if cmd.Output != nil {
+		err1 := cmd.Output.ValidateCommandOutput(stdoutOutput, stderrOutput)
+		if err1 != nil {
+			return nil, err1
+		}
 	}
 	return nil, err
 }
