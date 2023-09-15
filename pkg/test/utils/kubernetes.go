@@ -1039,7 +1039,10 @@ func RunCommand(ctx context.Context, namespace string, cmd harness.Command, cwd 
 	if err != nil {
 		return nil, fmt.Errorf("command %q with %w", cmd.Command, err)
 	}
-
+	// Check if command is running in background and has an output validation
+	if cmd.Background && cmd.Output != nil {
+		return nil, errors.New("background commands cannot have an output validation")
+	}
 	kuttlENV := make(map[string]string)
 	kuttlENV["NAMESPACE"] = namespace
 	kuttlENV["KUBECONFIG"] = kubeconfigPath(actualDir, kubeconfigOverride)
@@ -1113,10 +1116,7 @@ func RunCommand(ctx context.Context, namespace string, cmd harness.Command, cwd 
 	}
 
 	if cmd.Output != nil {
-		err1 := cmd.Output.ValidateCommandOutput(stdoutOutput, stderrOutput)
-		if err1 != nil {
-			return nil, err1
-		}
+		return nil, cmd.Output.ValidateCommandOutput(stdoutOutput, stderrOutput)
 	}
 	return nil, err
 }
