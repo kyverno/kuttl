@@ -196,7 +196,7 @@ type Command struct {
 	Command string `json:"command"`
 	// Output defines the expected output criteria for the command.
 	// It can check if the command's output equals or contains specific strings.
-	Output CommandOutput `json:"output"`
+	Output *CommandOutput `json:"output,omitempty"`
 	// If set, the `--namespace` flag will be appended to the command with the namespace to use.
 	Namespaced bool `json:"namespaced"`
 	// Ability to run a shell script from TestStep (without a script file)

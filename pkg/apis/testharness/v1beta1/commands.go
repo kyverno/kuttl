@@ -10,11 +10,15 @@ import (
 func (c *CommandOutput) ValidateCommandOutput(stdoutOutput, stderrOutput strings.Builder) error {
 	var errs []string
 
-	if err := c.Stdout.validateOutput("stdout", stdoutOutput.String()); err != nil {
-		errs = append(errs, err.Error())
+	if c.Stdout != nil {
+		if err := c.Stdout.validateOutput("stdout", stdoutOutput.String()); err != nil {
+			errs = append(errs, err.Error())
+		}
 	}
-	if err := c.Stderr.validateOutput("stderr", stderrOutput.String()); err != nil {
-		errs = append(errs, err.Error())
+	if c.Stderr != nil {
+		if err := c.Stderr.validateOutput("stderr", stderrOutput.String()); err != nil {
+			errs = append(errs, err.Error())
+		}
 	}
 	if len(errs) > 0 {
 		return fmt.Errorf("validation errors: %s", strings.Join(errs, "; "))
