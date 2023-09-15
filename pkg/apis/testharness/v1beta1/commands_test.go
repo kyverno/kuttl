@@ -285,6 +285,36 @@ func TestValidateCommandOutput(t *testing.T) {
 			}(),
 			wantErr: false,
 		},
+		{
+			name: "defualt match type is not provided",
+			cmdOutput: CommandOutput{
+				Stdout: &ExpectedOutput{
+					MatchType:     "",
+					ExpectedValue: "Hello, World!",
+				},
+			},
+			stdoutOutput: func() strings.Builder {
+				b := strings.Builder{}
+				b.WriteString("Hello, World!")
+				return b
+			}(),
+			wantErr: false,
+		},
+		{
+			name: "random match type is not provided",
+			cmdOutput: CommandOutput{
+				Stdout: &ExpectedOutput{
+					MatchType:     "abc",
+					ExpectedValue: "Hello, World!",
+				},
+			},
+			stdoutOutput: func() strings.Builder {
+				b := strings.Builder{}
+				b.WriteString("Hello, World!")
+				return b
+			}(),
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
