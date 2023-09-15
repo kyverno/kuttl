@@ -27,9 +27,6 @@ func (c *CommandOutput) ValidateCommandOutput(stdoutOutput, stderrOutput strings
 }
 
 func (e *ExpectedOutput) validateOutput(outputType string, actualValue string) error {
-	if e.ExpectedValue == "" {
-		return nil
-	}
 	expectedValue := e.ExpectedValue
 	switch e.MatchType {
 	case MatchEquals:
