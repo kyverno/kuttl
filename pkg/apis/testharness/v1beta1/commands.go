@@ -29,11 +29,6 @@ func (c *CommandOutput) ValidateCommandOutput(stdoutOutput, stderrOutput strings
 func (e *ExpectedOutput) validateOutput(outputType string, actualValue string) error {
 	expectedValue := e.ExpectedValue
 	switch e.MatchType {
-	case MatchEquals:
-		if actualValue != expectedValue {
-			return fmt.Errorf("expected exact %s: %s, got: %s", outputType, expectedValue, actualValue)
-		}
-
 	case MatchContains:
 		if !strings.Contains(actualValue, expectedValue) {
 			return fmt.Errorf("expected %s to contain: %s, but it did not", outputType, expectedValue)
@@ -44,8 +39,10 @@ func (e *ExpectedOutput) validateOutput(outputType string, actualValue string) e
 			return fmt.Errorf("%s did not match wildcard pattern: %s", outputType, expectedValue)
 		}
 
-	default:
-		return fmt.Errorf("invalid %s match type: %s", outputType, e.MatchType)
+	default: // MatchEquals
+		if actualValue != expectedValue {
+			return fmt.Errorf("expected exact %s: %s, got: %s", outputType, expectedValue, actualValue)
+		}
 	}
 
 	return nil

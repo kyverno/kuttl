@@ -270,6 +270,21 @@ func TestValidateCommandOutput(t *testing.T) {
 			}(),
 			wantErr: true,
 		},
+		{
+			name: "Empty Expected Output",
+			cmdOutput: CommandOutput{
+				Stderr: &ExpectedOutput{
+					MatchType:     MatchContains,
+					ExpectedValue: "",
+				},
+			},
+			stderrOutput: func() strings.Builder {
+				b := strings.Builder{}
+				b.WriteString("Empty Expected Output")
+				return b
+			}(),
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
