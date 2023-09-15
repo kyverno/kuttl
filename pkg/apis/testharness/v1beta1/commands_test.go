@@ -286,7 +286,7 @@ func TestValidateCommandOutput(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "defualt match type is not provided",
+			name: "default match type is not provided",
 			cmdOutput: CommandOutput{
 				Stdout: &ExpectedOutput{
 					MatchType:     "",
