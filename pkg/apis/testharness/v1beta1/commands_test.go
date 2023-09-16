@@ -313,7 +313,7 @@ func TestValidateCommandOutput(t *testing.T) {
 				b.WriteString("Hello, World!")
 				return b
 			}(),
-			wantErr: false,
+			wantErr: true,
 		},
 	}
 

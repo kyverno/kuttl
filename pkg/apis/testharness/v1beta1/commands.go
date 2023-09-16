@@ -43,11 +43,11 @@ func (e *ExpectedOutput) validateOutput(outputType string, actualValue string) e
 			return fmt.Errorf("%s did not match wildcard pattern: %s", outputType, expectedValue)
 		}
 
-        case MatchEquals:
+	case MatchEquals:
 		if actualValue != expectedValue {
 			return fmt.Errorf("expected exact %s: %s, got: %s", outputType, expectedValue, actualValue)
 		}
-	default: // MatchEquals
+	default: // Throw an error if we don't recognise the match type
 		return fmt.Errorf("unrecognised match type %s", matchType)
 	}
 
