@@ -1039,7 +1039,10 @@ func RunCommand(ctx context.Context, namespace string, cmd harness.Command, cwd 
 	if err != nil {
 		return nil, fmt.Errorf("command %q with %w", cmd.Command, err)
 	}
-
+	// Check if command is running in background and has an output validation
+	if cmd.Background && cmd.Output != nil {
+		return nil, errors.New("background commands cannot have an output validation")
+	}
 	kuttlENV := make(map[string]string)
 	kuttlENV["NAMESPACE"] = namespace
 	kuttlENV["KUBECONFIG"] = kubeconfigPath(actualDir, kubeconfigOverride)
@@ -1075,9 +1078,14 @@ func RunCommand(ctx context.Context, namespace string, cmd harness.Command, cwd 
 	logger.Logf("running command: %v", builtCmd.Args)
 
 	builtCmd.Dir = cwd
-	if !cmd.SkipLogOutput {
-		builtCmd.Stdout = stdout
-		builtCmd.Stderr = stderr
+	// Capturing the command output
+	var stdoutOutput, stderrOutput strings.Builder
+	if cmd.SkipLogOutput {
+		builtCmd.Stdout = &stdoutOutput
+		builtCmd.Stderr = &stderrOutput
+	} else {
+		builtCmd.Stdout = io.MultiWriter(stdout, &stdoutOutput)
+		builtCmd.Stderr = io.MultiWriter(stderr, &stderrOutput)
 	}
 	builtCmd.Env = os.Environ()
 	for key, value := range kuttlENV {
@@ -1099,11 +1107,16 @@ func RunCommand(ctx context.Context, namespace string, cmd harness.Command, cwd 
 	}
 
 	err = builtCmd.Wait()
+
 	if errors.As(err, &exerr) && cmd.IgnoreFailure {
 		return nil, nil
 	}
 	if errors.Is(cmdCtx.Err(), context.DeadlineExceeded) {
 		return nil, fmt.Errorf("command %q exceeded %v sec timeout, %w", cmd.Command, timeout, cmdCtx.Err())
+	}
+
+	if cmd.Output != nil {
+		return nil, cmd.Output.ValidateCommandOutput(stdoutOutput, stderrOutput)
 	}
 	return nil, err
 }

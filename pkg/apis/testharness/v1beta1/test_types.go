@@ -8,6 +8,14 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+type MatchType string
+
+const (
+	MatchEquals   MatchType = "Equals"
+	MatchContains MatchType = "Contains"
+	MatchWildcard MatchType = "Wildcard"
+)
+
 // Create embedded struct to implement custom DeepCopyInto method
 type RestConfig struct {
 	RC *rest.Config
@@ -186,6 +194,9 @@ type ObjectReference struct {
 type Command struct {
 	// The command and argument to run as a string.
 	Command string `json:"command"`
+	// Output defines the expected output criteria for the command.
+	// It can check if the command's output equals or contains specific strings.
+	Output *CommandOutput `json:"output,omitempty"`
 	// If set, the `--namespace` flag will be appended to the command with the namespace to use.
 	Namespaced bool `json:"namespaced"`
 	// Ability to run a shell script from TestStep (without a script file)
@@ -200,6 +211,23 @@ type Command struct {
 	Timeout int `json:"timeout"`
 	// If set, the output from the command is NOT logged.  Useful for sensitive logs or to reduce noise.
 	SkipLogOutput bool `json:"skipLogOutput"`
+}
+
+// CommandOutput encapsulates expected outputs for stdout and stderr streams.
+type CommandOutput struct {
+	// Stdout contains the expected output criteria for the standard output.
+	Stdout *ExpectedOutput `json:"stdout,omitempty"`
+	// Stderr contains the expected output criteria for the standard error.
+	Stderr *ExpectedOutput `json:"stderr,omitempty"`
+}
+
+// ExpectedOutput defines the criteria that command output should meet.
+type ExpectedOutput struct {
+	// MatchType is the type of match that should be applied for validation.
+	// This could be "Equals", "Contains", or "Wildcard".
+	MatchType MatchType `json:"match"`
+	// Value is the expected value or pattern that should be matched against the command's output.
+	ExpectedValue string `json:"expected"`
 }
 
 // TestCollector are post assert / error commands that allow for the collection of information sent to the test log.
