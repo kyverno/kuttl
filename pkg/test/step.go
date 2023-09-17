@@ -457,28 +457,40 @@ func (s *Step) Check(namespace string, timeout int) []error {
 		}
 
 		// Extract the data from the current object based on the assert.path
-		data, found, err := unstructured.NestedSlice(actualObject.(runtime.Unstructured).UnstructuredContent(), strings.Split(expected.path, "/")...)
+		actualData, found, err := unstructured.NestedSlice(actualObject.(runtime.Unstructured).UnstructuredContent(), strings.Split(expected.path, "/")...)
 		if err != nil {
-			testErrors = append(testErrors, fmt.Errorf("failed to extract data from %s at path %s: %v", actualObject.GetObjectKind().GroupVersionKind().String(), expected.path, err))
+			testErrors = append(testErrors, fmt.Errorf("failed to extract current data from resource type %s at path '%s'. Error: %v",
+				actualObject.GetObjectKind().GroupVersionKind().String(), expected.path, err))
 			continue
 		}
 		if !found {
-			testErrors = append(testErrors, fmt.Errorf("%s not found in current resource at path %s", actualObject.GetObjectKind().GroupVersionKind().String(), expected.path))
+			testErrors = append(testErrors, fmt.Errorf("path '%s' not found in current resource of type %s",
+				expected.path, actualObject.GetObjectKind().GroupVersionKind().String()))
 		}
 
 		// Match the expected data (from assert.object) with the extracted data
-		expectedData, _, _ := unstructured.NestedSlice(expected.object.(runtime.Unstructured).UnstructuredContent(), strings.Split(expected.path, "/")...)
+		expectedData, found, err := unstructured.NestedSlice(expected.object.(runtime.Unstructured).UnstructuredContent(), strings.Split(expected.path, "/")...)
+		if err != nil {
+			testErrors = append(testErrors, fmt.Errorf("failed to extract expected data from provided resource of type %s at path '%s'. Error: %v",
+				expected.object.GetObjectKind().GroupVersionKind().String(), expected.path, err))
+			continue
+		}
+		if !found {
+			testErrors = append(testErrors, fmt.Errorf("path '%s' not found in provided expected data of resource type %s",
+				expected.path, expected.object.GetObjectKind().GroupVersionKind().String()))
+		}
 
 		if expected.stratergy == "" {
 			expected.stratergy = harness.StrategyAnywhere
 		}
+
 		switch expected.stratergy {
 		case harness.StrategyAnywhere:
-			if !contains(data, expectedData) {
+			if !contains(actualData, expectedData) {
 				testErrors = append(testErrors, fmt.Errorf("expected data not found in current resource"))
 			}
 		case harness.StrategyExact:
-			if !reflect.DeepEqual(data, expectedData) {
+			if !reflect.DeepEqual(actualData, expectedData) {
 				testErrors = append(testErrors, fmt.Errorf("data in current resource doesn't match exactly with expected data"))
 			}
 		default:
