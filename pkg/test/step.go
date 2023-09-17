@@ -367,7 +367,7 @@ func (s *Step) CheckResource(expected runtime.Object, namespace string) []error 
 }
 
 // validateAssertArray contains the logic to validate an individual AssertArray entry.
-func (s *Step) validateAssertArray(expected assertArry, namespace string) []error {
+func (s *Step) validateAssertArray(expected assertArry) []error {
 	var validationErrors []error
 
 	actualObject, err := s.GetCurrentResource(expected.object)
@@ -503,7 +503,7 @@ func (s *Step) Check(namespace string, timeout int) []error {
 	}
 
 	for _, expected := range s.AssertArrays {
-		errors := s.validateAssertArray(expected, namespace)
+		errors := s.validateAssertArray(expected)
 		testErrors = append(testErrors, errors...)
 	}
 
