@@ -366,6 +366,59 @@ func (s *Step) CheckResource(expected runtime.Object, namespace string) []error 
 	return testErrors
 }
 
+// validateAssertArray contains the logic to validate an individual AssertArray entry.
+func (s *Step) validateAssertArray(expected assertArry, namespace string) []error {
+	var validationErrors []error
+
+	actualObject, err := s.GetCurrentResource(expected.object)
+	if err != nil {
+		return append(validationErrors, err)
+	}
+
+	// Extract the data from the current object based on the assert.path
+	actualData, found, err := unstructured.NestedSlice(actualObject.(runtime.Unstructured).UnstructuredContent(), strings.Split(expected.path, "/")...)
+	if err != nil {
+		validationErrors = append(validationErrors, fmt.Errorf("failed to extract current data from resource type %s at path '%s'. Error: %v",
+			actualObject.GetObjectKind().GroupVersionKind().String(), expected.path, err))
+		return validationErrors
+	}
+	if !found {
+		validationErrors = append(validationErrors, fmt.Errorf("path '%s' not found in current resource of type %s",
+			expected.path, actualObject.GetObjectKind().GroupVersionKind().String()))
+	}
+
+	// Match the expected data (from assert.object) with the extracted data
+	expectedData, found, err := unstructured.NestedSlice(expected.object.(runtime.Unstructured).UnstructuredContent(), strings.Split(expected.path, "/")...)
+	if err != nil {
+		validationErrors = append(validationErrors, fmt.Errorf("failed to extract expected data from provided resource of type %s at path '%s'. Error: %v",
+			expected.object.GetObjectKind().GroupVersionKind().String(), expected.path, err))
+		return validationErrors
+	}
+	if !found {
+		validationErrors = append(validationErrors, fmt.Errorf("path '%s' not found in provided expected data of resource type %s",
+			expected.path, expected.object.GetObjectKind().GroupVersionKind().String()))
+	}
+
+	if expected.stratergy == "" {
+		expected.stratergy = harness.StrategyAnywhere
+	}
+
+	switch expected.stratergy {
+	case harness.StrategyAnywhere:
+		if !contains(actualData, expectedData) {
+			validationErrors = append(validationErrors, fmt.Errorf("expected data not found in current resource"))
+		}
+	case harness.StrategyExact:
+		if !reflect.DeepEqual(actualData, expectedData) {
+			validationErrors = append(validationErrors, fmt.Errorf("data in current resource doesn't match exactly with expected data"))
+		}
+	default:
+		validationErrors = append(validationErrors, fmt.Errorf("unknown strategy: %s", expected.stratergy))
+	}
+
+	return validationErrors
+}
+
 // CheckResourceAbsent checks if the expected resource's state is absent in Kubernetes.
 func (s *Step) CheckResourceAbsent(expected runtime.Object, namespace string) error {
 	cl, err := s.Client(false)
@@ -450,52 +503,8 @@ func (s *Step) Check(namespace string, timeout int) []error {
 	}
 
 	for _, expected := range s.AssertArrays {
-		actualObject, err := s.GetCurrentResource(expected.object)
-		if err != nil {
-			testErrors = append(testErrors, err)
-			continue
-		}
-
-		// Extract the data from the current object based on the assert.path
-		actualData, found, err := unstructured.NestedSlice(actualObject.(runtime.Unstructured).UnstructuredContent(), strings.Split(expected.path, "/")...)
-		if err != nil {
-			testErrors = append(testErrors, fmt.Errorf("failed to extract current data from resource type %s at path '%s'. Error: %v",
-				actualObject.GetObjectKind().GroupVersionKind().String(), expected.path, err))
-			continue
-		}
-		if !found {
-			testErrors = append(testErrors, fmt.Errorf("path '%s' not found in current resource of type %s",
-				expected.path, actualObject.GetObjectKind().GroupVersionKind().String()))
-		}
-
-		// Match the expected data (from assert.object) with the extracted data
-		expectedData, found, err := unstructured.NestedSlice(expected.object.(runtime.Unstructured).UnstructuredContent(), strings.Split(expected.path, "/")...)
-		if err != nil {
-			testErrors = append(testErrors, fmt.Errorf("failed to extract expected data from provided resource of type %s at path '%s'. Error: %v",
-				expected.object.GetObjectKind().GroupVersionKind().String(), expected.path, err))
-			continue
-		}
-		if !found {
-			testErrors = append(testErrors, fmt.Errorf("path '%s' not found in provided expected data of resource type %s",
-				expected.path, expected.object.GetObjectKind().GroupVersionKind().String()))
-		}
-
-		if expected.stratergy == "" {
-			expected.stratergy = harness.StrategyAnywhere
-		}
-
-		switch expected.stratergy {
-		case harness.StrategyAnywhere:
-			if !contains(actualData, expectedData) {
-				testErrors = append(testErrors, fmt.Errorf("expected data not found in current resource"))
-			}
-		case harness.StrategyExact:
-			if !reflect.DeepEqual(actualData, expectedData) {
-				testErrors = append(testErrors, fmt.Errorf("data in current resource doesn't match exactly with expected data"))
-			}
-		default:
-			testErrors = append(testErrors, fmt.Errorf("unknown strategy: %s", expected.stratergy))
-		}
+		errors := s.validateAssertArray(expected, namespace)
+		testErrors = append(testErrors, errors...)
 	}
 
 	if s.Assert != nil {
