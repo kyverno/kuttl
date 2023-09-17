@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
@@ -15,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -35,6 +37,12 @@ type apply struct {
 	shouldFail bool
 }
 
+type assertArry struct {
+	object    client.Object
+	path      string
+	stratergy harness.Strategy
+}
+
 // A Step contains the name of the test step, its index in the test,
 // and all of the test step's settings (including objects to apply and assert on).
 type Step struct {
@@ -50,6 +58,8 @@ type Step struct {
 	Asserts []client.Object
 	Apply   []apply
 	Errors  []client.Object
+
+	AssertArrays []assertArry
 
 	Timeout int
 
@@ -431,12 +441,47 @@ func (s *Step) CheckAssertCommands(ctx context.Context, namespace string, comman
 	return testErrors
 }
 
-// Check checks if the resources defined in Asserts and Errors are in the correct state.
+// Check checks if the resources defined in Asserts, Assert_Array and Errors are in the correct state.
 func (s *Step) Check(namespace string, timeout int) []error {
 	testErrors := []error{}
 
 	for _, expected := range s.Asserts {
 		testErrors = append(testErrors, s.CheckResource(expected, namespace)...)
+	}
+
+	for _, expected := range s.AssertArrays {
+		actualObject, err := s.GetCurrentResource(expected.object)
+		if err != nil {
+			testErrors = append(testErrors, err)
+			continue
+		}
+
+		// Extract the data from the current object based on the assert.path
+		data, found, err := unstructured.NestedSlice(actualObject.(runtime.Unstructured).UnstructuredContent(), strings.Split(expected.path, "/")...)
+		if err != nil {
+			testErrors = append(testErrors, fmt.Errorf("failed to extract data from %s at path %s: %v", actualObject.GetObjectKind().GroupVersionKind().String(), expected.path, err))
+			continue
+		}
+		if !found {
+			testErrors = append(testErrors, fmt.Errorf("%s not found in current resource at path %s", actualObject.GetObjectKind().GroupVersionKind().String(), expected.path))
+		}
+
+		// Match the expected data (from assert.object) with the extracted data
+		expectedData, _, _ := unstructured.NestedSlice(expected.object.(runtime.Unstructured).UnstructuredContent(), strings.Split(expected.path, "/")...)
+
+		switch expected.stratergy {
+		case harness.StrategyAnywhere:
+			if !contains(data, expectedData) {
+				testErrors = append(testErrors, fmt.Errorf("expected data not found in current resource"))
+			}
+		case harness.StrategyExact:
+			if !reflect.DeepEqual(data, expectedData) {
+				testErrors = append(testErrors, fmt.Errorf("data in current resource doesn't match exactly with expected data"))
+			}
+		default:
+			testErrors = append(testErrors, fmt.Errorf("unknown strategy: %s", expected.stratergy))
+		}
+
 	}
 
 	if s.Assert != nil {
@@ -544,6 +589,7 @@ func (s *Step) LoadYAML(file string) error {
 	}
 
 	asserts := []client.Object{}
+	assertArrys := []assertArry{}
 
 	for _, obj := range s.Asserts {
 		if obj.GetObjectKind().GroupVersionKind().Kind == "TestAssert" {
@@ -617,10 +663,22 @@ func (s *Step) LoadYAML(file string) error {
 			}
 			s.Errors = append(s.Errors, errObjs...)
 		}
+		// process configured assert arrays
+		for _, assertArray := range s.Step.AssertArrays {
+			exAssertArray := env.Expand(assertArray.File)
+			aa, err := ObjectsFromPath(exAssertArray, s.Dir)
+			if err != nil {
+				return fmt.Errorf("step %q assert array path %s: %w", s.Name, exAssertArray, err)
+			}
+			for _, a := range aa {
+				assertArrys = append(assertArrys, assertArry{object: a, path: assertArray.Path, stratergy: assertArray.Strategy})
+			}
+		}
 	}
 
 	s.Apply = applies
 	s.Asserts = asserts
+	s.AssertArrays = assertArrys
 	return nil
 }
 
@@ -652,6 +710,40 @@ func (s *Step) populateObjectsByFileName(fileName string, objects []client.Objec
 	}
 
 	return nil
+}
+
+func (s *Step) GetCurrentResource(expectedObj client.Object) (client.Object, error) {
+	c, err := s.Client(false)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get client: %v", err)
+	}
+
+	// Fetch the object based on its GVK and namespace/name
+	gvk := expectedObj.GetObjectKind().GroupVersionKind()
+	namespacedName := types.NamespacedName{
+		Namespace: expectedObj.GetNamespace(),
+		Name:      expectedObj.GetName(),
+	}
+
+	// Create an empty object to receive the fetched data
+	fetchedObj := &unstructured.Unstructured{}
+	fetchedObj.SetGroupVersionKind(gvk)
+
+	err = c.Get(context.TODO(), namespacedName, fetchedObj)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get %s resource: %v", gvk.String(), err)
+	}
+
+	return fetchedObj, nil
+}
+
+func contains(mainSlice, subSlice []interface{}) bool {
+	for _, m := range mainSlice {
+		if reflect.DeepEqual(m, subSlice) {
+			return true
+		}
+	}
+	return false
 }
 
 // ObjectsFromPath returns an array of runtime.Objects for files / urls provided

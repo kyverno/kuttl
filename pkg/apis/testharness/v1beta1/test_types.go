@@ -16,6 +16,13 @@ const (
 	MatchWildcard MatchType = "Wildcard"
 )
 
+type Strategy string
+
+const (
+	StrategyAnywhere Strategy = "Anywhere"
+	StrategyExact    Strategy = "Exact"
+)
+
 // Create embedded struct to implement custom DeepCopyInto method
 type RestConfig struct {
 	RC *rest.Config
@@ -150,6 +157,19 @@ type TestStep struct {
 
 	// Kubeconfig to use when applying and asserting for this step.
 	Kubeconfig string `json:"kubeconfig,omitempty"`
+
+	// AssertArrays holds a set of conditions for validating Kubernetes resources against specified YAML content.
+	AssertArrays []AssertArray `json:"assert_array,omitempty"`
+}
+
+// AssertArray specifies conditions for verifying content within a YAML against a Kubernetes resource.
+type AssertArray struct {
+	// File specifies the relative or full path to the YAML containing the expected content.
+	File string `json:"file"`
+	// Path indicates the location within the YAML file to extract data for verification.
+	Path string `json:"path"`
+	// Strategy defines how the extracted data should be compared against the Kubernetes resource.
+	Strategy Strategy `json:"strategy"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
