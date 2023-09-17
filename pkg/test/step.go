@@ -469,6 +469,9 @@ func (s *Step) Check(namespace string, timeout int) []error {
 		// Match the expected data (from assert.object) with the extracted data
 		expectedData, _, _ := unstructured.NestedSlice(expected.object.(runtime.Unstructured).UnstructuredContent(), strings.Split(expected.path, "/")...)
 
+		if expected.stratergy == "" {
+			expected.stratergy = harness.StrategyAnywhere
+		}
 		switch expected.stratergy {
 		case harness.StrategyAnywhere:
 			if !contains(data, expectedData) {
@@ -481,7 +484,6 @@ func (s *Step) Check(namespace string, timeout int) []error {
 		default:
 			testErrors = append(testErrors, fmt.Errorf("unknown strategy: %s", expected.stratergy))
 		}
-
 	}
 
 	if s.Assert != nil {
