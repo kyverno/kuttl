@@ -465,7 +465,7 @@ func (t *Case) LoadTestSteps() error {
 			Index:      int(index),
 			SkipDelete: t.SkipDelete,
 			Dir:        t.Dir,
-			Asserts:    []client.Object{},
+			Asserts:    []asserts_array{},
 			Apply:      []apply{},
 			Errors:     []client.Object{},
 		}

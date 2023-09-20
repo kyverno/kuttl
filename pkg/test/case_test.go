@@ -49,13 +49,12 @@ func TestLoadTestSteps(t *testing.T) {
 							}),
 						},
 					},
-					Asserts: []client.Object{
-						testutils.WithStatus(t, testutils.NewPod("test", ""), map[string]interface{}{
+					Asserts: []asserts_array{
+						{object: testutils.WithStatus(t, testutils.NewPod("test", ""), map[string]interface{}{
 							"qosClass": "BestEffort",
-						}),
+						})},
 					},
-					Errors:       []client.Object{},
-					AssertArrays: []assertArry{},
+					Errors: []client.Object{},
 				},
 				{
 					Name:  "test-assert",
@@ -96,13 +95,12 @@ func TestLoadTestSteps(t *testing.T) {
 							}),
 						},
 					},
-					Asserts: []client.Object{
-						testutils.WithStatus(t, testutils.NewPod("test2", ""), map[string]interface{}{
+					Asserts: []asserts_array{
+						{object: testutils.WithStatus(t, testutils.NewPod("test2", ""), map[string]interface{}{
 							"qosClass": "BestEffort",
-						}),
+						})},
 					},
-					Errors:       []client.Object{},
-					AssertArrays: []assertArry{},
+					Errors: []client.Object{},
 				},
 				{
 					Name:  "pod",
@@ -129,13 +127,12 @@ func TestLoadTestSteps(t *testing.T) {
 							}),
 						},
 					},
-					Asserts: []client.Object{
-						testutils.WithStatus(t, testutils.NewPod("test3", ""), map[string]interface{}{
+					Asserts: []asserts_array{
+						{object: testutils.WithStatus(t, testutils.NewPod("test4", ""), map[string]interface{}{
 							"qosClass": "BestEffort",
-						}),
+						})},
 					},
-					Errors:       []client.Object{},
-					AssertArrays: []assertArry{},
+					Errors: []client.Object{},
 				},
 				{
 					Name:  "name-overridden",
@@ -174,13 +171,12 @@ func TestLoadTestSteps(t *testing.T) {
 							}),
 						},
 					},
-					Asserts: []client.Object{
-						testutils.WithSpec(t, testutils.NewPod("test5", ""), map[string]interface{}{
+					Asserts: []asserts_array{
+						{object: testutils.WithStatus(t, testutils.NewPod("test6", ""), map[string]interface{}{
 							"restartPolicy": "Never",
-						}),
+						})},
 					},
-					Errors:       []client.Object{},
-					AssertArrays: []assertArry{},
+					Errors: []client.Object{},
 				},
 			},
 		},
@@ -214,12 +210,13 @@ func TestLoadTestSteps(t *testing.T) {
 							},
 						},
 					},
-					Asserts: []client.Object{
-						&unstructured.Unstructured{
+					Asserts: []asserts_array{
+						{object: &unstructured.Unstructured{
 							Object: map[string]interface{}{
 								"apiVersion": "v1",
 								"kind":       "Pod",
 								"metadata": map[string]interface{}{
+									"name": "pod-1",
 									"labels": map[string]interface{}{
 										"app": "nginx",
 									},
@@ -233,10 +230,9 @@ func TestLoadTestSteps(t *testing.T) {
 									},
 								},
 							},
-						},
+						}},
 					},
-					Errors:       []client.Object{},
-					AssertArrays: []assertArry{},
+					Errors: []client.Object{},
 				},
 			},
 		},

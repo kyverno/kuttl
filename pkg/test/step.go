@@ -37,10 +37,10 @@ type apply struct {
 	shouldFail bool
 }
 
-type assertArry struct {
-	object    client.Object
-	path      string
-	stratergy harness.Strategy
+type asserts_array struct {
+	object     client.Object
+	shouldfail bool
+	options    *harness.Options
 }
 
 // A Step contains the name of the test step, its index in the test,
@@ -55,11 +55,9 @@ type Step struct {
 	Step   *harness.TestStep
 	Assert *harness.TestAssert
 
-	Asserts []client.Object
+	Asserts []asserts_array
 	Apply   []apply
 	Errors  []client.Object
-
-	AssertArrays []assertArry
 
 	Timeout int
 
@@ -366,44 +364,52 @@ func (s *Step) CheckResource(expected runtime.Object, namespace string) []error 
 	return testErrors
 }
 
+func (s *Step) extractDataFromObject(obj client.Object, path string, resourceType string) ([]interface{}, error) {
+	data, found, err := unstructured.NestedSlice(obj.(runtime.Unstructured).UnstructuredContent(), strings.Split(path, "/")...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract data from resource type %s at path '%s'. Error: %v", resourceType, path, err)
+	}
+	if !found {
+		return nil, fmt.Errorf("path '%s' not found in resource of type %s", path, resourceType)
+	}
+	return data, nil
+}
+
 // validateAssertArray contains the logic to validate an individual AssertArray entry.
-func (s *Step) validateAssertArray(expected assertArry) []error {
+func (s *Step) validateAssertArray(obj client.Object, option harness.AssertArray) []error {
 	var validationErrors []error
 
-	actualObject, err := s.GetCurrentResource(expected.object)
+	actualObject, err := s.GetCurrentResource(obj)
 	if err != nil {
 		return append(validationErrors, err)
 	}
 
 	// Extract the data from the current object based on the assert.path
-	actualData, found, err := unstructured.NestedSlice(actualObject.(runtime.Unstructured).UnstructuredContent(), strings.Split(expected.path, "/")...)
+	actualData, err := s.extractDataFromObject(actualObject, option.Path, actualObject.GetObjectKind().GroupVersionKind().String())
 	if err != nil {
-		validationErrors = append(validationErrors, fmt.Errorf("failed to extract current data from resource type %s at path '%s'. Error: %v",
-			actualObject.GetObjectKind().GroupVersionKind().String(), expected.path, err))
-		return validationErrors
-	}
-	if !found {
-		validationErrors = append(validationErrors, fmt.Errorf("path '%s' not found in current resource of type %s",
-			expected.path, actualObject.GetObjectKind().GroupVersionKind().String()))
+		validationErrors = append(validationErrors, err)
 	}
 
 	// Match the expected data (from assert.object) with the extracted data
-	expectedData, found, err := unstructured.NestedSlice(expected.object.(runtime.Unstructured).UnstructuredContent(), strings.Split(expected.path, "/")...)
+	expectedData, err := s.extractDataFromObject(obj, option.Path, obj.GetObjectKind().GroupVersionKind().String())
 	if err != nil {
-		validationErrors = append(validationErrors, fmt.Errorf("failed to extract expected data from provided resource of type %s at path '%s'. Error: %v",
-			expected.object.GetObjectKind().GroupVersionKind().String(), expected.path, err))
-		return validationErrors
-	}
-	if !found {
-		validationErrors = append(validationErrors, fmt.Errorf("path '%s' not found in provided expected data of resource type %s",
-			expected.path, expected.object.GetObjectKind().GroupVersionKind().String()))
+		validationErrors = append(validationErrors, err)
 	}
 
-	if expected.stratergy == "" {
-		expected.stratergy = harness.StrategyAnywhere
+	// If we had no errors extracting both actual and expected data, proceed with the equality check.
+	if len(validationErrors) == 0 {
+		return checkEquals(option, actualData, expectedData)
+	}
+	return validationErrors
+}
+
+func checkEquals(option harness.AssertArray, actualData, expectedData []interface{}) []error {
+	var validationErrors []error
+	if option.Strategy == "" {
+		option.Strategy = harness.StrategyAnywhere
 	}
 
-	switch expected.stratergy {
+	switch option.Strategy {
 	case harness.StrategyAnywhere:
 		if !contains(actualData, expectedData) {
 			validationErrors = append(validationErrors, fmt.Errorf("expected data not found in current resource"))
@@ -413,7 +419,7 @@ func (s *Step) validateAssertArray(expected assertArry) []error {
 			validationErrors = append(validationErrors, fmt.Errorf("data in current resource doesn't match exactly with expected data"))
 		}
 	default:
-		validationErrors = append(validationErrors, fmt.Errorf("unknown strategy: %s", expected.stratergy))
+		validationErrors = append(validationErrors, fmt.Errorf("unknown strategy: %s", option.Strategy))
 	}
 
 	return validationErrors
@@ -494,17 +500,19 @@ func (s *Step) CheckAssertCommands(ctx context.Context, namespace string, comman
 	return testErrors
 }
 
-// Check checks if the resources defined in Asserts, Assert_Array and Errors are in the correct state.
+// Check checks if the resources defined in Asserts and Errors are in the correct state.
 func (s *Step) Check(namespace string, timeout int) []error {
 	testErrors := []error{}
 
 	for _, expected := range s.Asserts {
-		testErrors = append(testErrors, s.CheckResource(expected, namespace)...)
-	}
-
-	for _, expected := range s.AssertArrays {
-		errors := s.validateAssertArray(expected)
-		testErrors = append(testErrors, errors...)
+		if expected.options != nil {
+			for _, option := range expected.options.AssertArray {
+				errors := s.validateAssertArray(expected.object, option)
+				testErrors = append(testErrors, errors...)
+			}
+		} else {
+			testErrors = append(testErrors, s.CheckResource(expected.object, namespace)...)
+		}
 	}
 
 	if s.Assert != nil {
@@ -611,10 +619,10 @@ func (s *Step) LoadYAML(file string) error {
 		return fmt.Errorf("populating step: %v", err)
 	}
 
-	asserts := []client.Object{}
-	assertArrys := []assertArry{}
+	asserts := []asserts_array{}
 
-	for _, obj := range s.Asserts {
+	for _, assert := range s.Asserts {
+		obj := assert.object
 		if obj.GetObjectKind().GroupVersionKind().Kind == "TestAssert" {
 			if testAssert, ok := obj.DeepCopyObject().(*harness.TestAssert); ok {
 				s.Assert = testAssert
@@ -622,7 +630,7 @@ func (s *Step) LoadYAML(file string) error {
 				return fmt.Errorf("failed to load TestAssert object from %s: it contains an object of type %T", file, obj)
 			}
 		} else {
-			asserts = append(asserts, obj)
+			asserts = append(asserts, assert)
 		}
 	}
 
@@ -669,13 +677,15 @@ func (s *Step) LoadYAML(file string) error {
 			}
 		}
 		// process configured step asserts
-		for _, assertPath := range s.Step.Assert {
-			exAssert := env.Expand(assertPath)
+		for _, assertArray := range s.Step.Assert {
+			exAssert := env.Expand(assertArray.File)
 			assert, err := ObjectsFromPath(exAssert, s.Dir)
 			if err != nil {
 				return fmt.Errorf("step %q assert path %s: %w", s.Name, exAssert, err)
 			}
-			asserts = append(asserts, assert...)
+			for _, a := range assert {
+				asserts = append(asserts, asserts_array{object: a, shouldfail: assertArray.ShouldFail, options: assertArray.Options})
+			}
 		}
 		// process configured errors
 		for _, errorPath := range s.Step.Error {
@@ -686,22 +696,10 @@ func (s *Step) LoadYAML(file string) error {
 			}
 			s.Errors = append(s.Errors, errObjs...)
 		}
-		// process configured assert arrays
-		for _, assertArray := range s.Step.AssertArrays {
-			exAssertArray := env.Expand(assertArray.File)
-			aa, err := ObjectsFromPath(exAssertArray, s.Dir)
-			if err != nil {
-				return fmt.Errorf("step %q assert array path %s: %w", s.Name, exAssertArray, err)
-			}
-			for _, a := range aa {
-				assertArrys = append(assertArrys, assertArry{object: a, path: assertArray.Path, stratergy: assertArray.Strategy})
-			}
-		}
 	}
 
 	s.Apply = applies
 	s.Asserts = asserts
-	s.AssertArrays = assertArrys
 	return nil
 }
 
@@ -715,7 +713,9 @@ func (s *Step) populateObjectsByFileName(fileName string, objects []client.Objec
 
 	switch fname := strings.ToLower(matches[1]); fname {
 	case "assert":
-		s.Asserts = append(s.Asserts, objects...)
+		for _, obj := range objects {
+			s.Asserts = append(s.Asserts, asserts_array{object: obj})
+		}
 	case "errors":
 		s.Errors = append(s.Errors, objects...)
 	default:
@@ -819,7 +819,7 @@ func validateTestStep(ts *harness.TestStep, baseDir string) error {
 	}
 	// Check if referenced files in  Assert  exist
 	for _, assert := range ts.Assert {
-		path := filepath.Join(baseDir, assert)
+		path := filepath.Join(baseDir, assert.File)
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			return fmt.Errorf("referenced file in Assert does not exist: %s", path)
 		}

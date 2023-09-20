@@ -287,12 +287,13 @@ func TestRun(t *testing.T) {
 		updateMethod func(*testing.T, client.Client)
 	}{
 		{
-			testName: "successful run", Step: Step{
+			testName: "successful run",
+			Step: Step{
 				Apply: []apply{
 					{object: testutils.NewPod("hello", "")},
 				},
-				Asserts: []client.Object{
-					testutils.NewPod("hello", ""),
+				Asserts: []asserts_array{
+					{object: testutils.NewPod("hello", "")},
 				},
 			},
 		},
@@ -301,10 +302,10 @@ func TestRun(t *testing.T) {
 				Apply: []apply{
 					{object: testutils.NewPod("hello", "")},
 				},
-				Asserts: []client.Object{
-					testutils.WithStatus(t, testutils.NewPod("hello", ""), map[string]interface{}{
+				Asserts: []asserts_array{
+					{object: testutils.WithStatus(t, testutils.NewPod("hello", ""), map[string]interface{}{
 						"phase": "Ready",
-					}),
+					})},
 				},
 			}, nil,
 		},
@@ -313,10 +314,10 @@ func TestRun(t *testing.T) {
 				Apply: []apply{
 					{object: testutils.NewPod("hello", "")},
 				},
-				Asserts: []client.Object{
-					testutils.WithStatus(t, testutils.NewPod("hello", ""), map[string]interface{}{
+				Asserts: []asserts_array{
+					{object: testutils.WithStatus(t, testutils.NewPod("hello", ""), map[string]interface{}{
 						"phase": "Ready",
-					}),
+					})},
 				},
 			}, func(t *testing.T, client client.Client) {
 				pod := testutils.NewPod("hello", testNamespace)

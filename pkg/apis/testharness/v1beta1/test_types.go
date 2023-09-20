@@ -140,7 +140,7 @@ type TestStep struct {
 	// Useful to reuse a number of applies across tests / test steps.
 	// all relative paths are relative to the folder the TestStep is defined in.
 	Apply  []Apply  `json:"apply,omitempty"`
-	Assert []string `json:"assert,omitempty"`
+	Assert []Assert `json:"assert,omitempty"`
 	Error  []string `json:"error,omitempty"`
 
 	// Objects to delete at the beginning of the test step.
@@ -157,15 +157,21 @@ type TestStep struct {
 
 	// Kubeconfig to use when applying and asserting for this step.
 	Kubeconfig string `json:"kubeconfig,omitempty"`
+}
 
-	// AssertArrays holds a set of conditions for validating Kubernetes resources against specified YAML content.
-	AssertArrays []AssertArray `json:"assert_array,omitempty"`
+type Assert struct {
+	// File specifies the relative or full path to the YAML containing the expected content.
+	File       string   `json:"file"`
+	ShouldFail bool     `json:"shouldFail,omitempty"`
+	Options    *Options `json:"options,omitempty"`
+}
+
+type Options struct {
+	AssertArray []AssertArray `json:"arrays,omitempty"`
 }
 
 // AssertArray specifies conditions for verifying content within a YAML against a Kubernetes resource.
 type AssertArray struct {
-	// File specifies the relative or full path to the YAML containing the expected content.
-	File string `json:"file"`
 	// Path indicates the location within the YAML file to extract data for verification.
 	Path string `json:"path"`
 	// Strategy defines how the extracted data should be compared against the Kubernetes resource.
