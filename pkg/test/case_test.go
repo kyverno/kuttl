@@ -216,7 +216,6 @@ func TestLoadTestSteps(t *testing.T) {
 								"apiVersion": "v1",
 								"kind":       "Pod",
 								"metadata": map[string]interface{}{
-									"name": "pod-1",
 									"labels": map[string]interface{}{
 										"app": "nginx",
 									},
