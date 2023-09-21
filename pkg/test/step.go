@@ -398,13 +398,13 @@ func (s *Step) validateAssertArray(obj client.Object, option harness.AssertArray
 
 	// If we had no errors extracting both actual and expected data, proceed with the equality check.
 	if len(validationErrors) == 0 {
-		return checkEquals(option, actualData, expectedData)
+		return append(validationErrors, checkEquals(option, actualData, expectedData))
 	}
 	return validationErrors
 }
 
-func checkEquals(option harness.AssertArray, actualData, expectedData []interface{}) []error {
-	var validationErrors []error
+func checkEquals(option harness.AssertArray, actualData, expectedData []interface{}) error {
+	var validationError error
 	if option.Strategy == "" {
 		option.Strategy = harness.StrategyAnywhere
 	}
@@ -412,17 +412,17 @@ func checkEquals(option harness.AssertArray, actualData, expectedData []interfac
 	switch option.Strategy {
 	case harness.StrategyAnywhere:
 		if !contains(actualData, expectedData) {
-			validationErrors = append(validationErrors, fmt.Errorf("expected data not found in current resource"))
+			validationError = fmt.Errorf("expected data not found in current resource")
 		}
 	case harness.StrategyExact:
 		if !reflect.DeepEqual(actualData, expectedData) {
-			validationErrors = append(validationErrors, fmt.Errorf("data in current resource doesn't match exactly with expected data"))
+			validationError = fmt.Errorf("data in current resource doesn't match exactly with expected data")
 		}
 	default:
-		validationErrors = append(validationErrors, fmt.Errorf("unknown strategy: %s", option.Strategy))
+		validationError = fmt.Errorf("unknown strategy: %s", option.Strategy)
 	}
 
-	return validationErrors
+	return validationError
 }
 
 // CheckResourceAbsent checks if the expected resource's state is absent in Kubernetes.
