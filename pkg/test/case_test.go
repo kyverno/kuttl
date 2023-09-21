@@ -176,7 +176,7 @@ func TestLoadTestSteps(t *testing.T) {
 						},
 					},
 					Asserts: []assertArray{
-						{object: testutils.WithStatus(t, testutils.NewPod("test5", ""), map[string]interface{}{
+						{object: testutils.WithSpec(t, testutils.NewPod("test5", ""), map[string]interface{}{
 							"restartPolicy": "Never",
 						})},
 					},
