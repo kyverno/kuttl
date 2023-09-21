@@ -507,11 +507,24 @@ func (s *Step) Check(namespace string, timeout int) []error {
 	for _, expected := range s.Asserts {
 		if expected.options != nil {
 			for _, option := range expected.options.AssertArray {
-				errors := s.validateAssertArray(expected.object, option)
-				testErrors = append(testErrors, errors...)
+				err := s.validateAssertArray(expected.object, option)
+				if err != nil && !expected.shouldfail {
+					testErrors = append(testErrors, err...)
+				}
+				// if there was no error but we expected one
+				if err == nil && expected.shouldfail {
+					testErrors = append(testErrors, errors.New("an error was expected but didn't happen"))
+				}
 			}
 		} else {
-			testErrors = append(testErrors, s.CheckResource(expected.object, namespace)...)
+			err := s.CheckResource(expected.object, namespace)
+			if err != nil && !expected.shouldfail {
+				testErrors = append(testErrors, err...)
+			}
+			// if there was no error but we expected one
+			if err == nil && expected.shouldfail {
+				testErrors = append(testErrors, errors.New("an error was expected but didn't happen"))
+			}
 		}
 	}
 
