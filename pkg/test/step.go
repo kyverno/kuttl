@@ -677,14 +677,14 @@ func (s *Step) LoadYAML(file string) error {
 			}
 		}
 		// process configured step asserts
-		for _, assertArray := range s.Step.Assert {
-			exAssert := env.Expand(assertArray.File)
+		for _, aa := range s.Step.Assert {
+			exAssert := env.Expand(aa.File)
 			assert, err := ObjectsFromPath(exAssert, s.Dir)
 			if err != nil {
 				return fmt.Errorf("step %q assert path %s: %w", s.Name, exAssert, err)
 			}
 			for _, a := range assert {
-				asserts = append(asserts, assertArray{object: a, shouldfail: assertArray.ShouldFail, options: assertArray.Options})
+				asserts = append(asserts, assertArray{object: a, shouldfail: aa.ShouldFail, options: aa.Options})
 			}
 		}
 		// process configured errors

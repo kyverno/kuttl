@@ -50,9 +50,12 @@ func TestLoadTestSteps(t *testing.T) {
 						},
 					},
 					Asserts: []assertArray{
-						{object: testutils.WithStatus(t, testutils.NewPod("test", ""), map[string]interface{}{
-							"qosClass": "BestEffort",
-						})},
+						{
+							object: testutils.WithStatus(t, testutils.NewPod("test", ""), map[string]interface{}{
+								"qosClass": "BestEffort",
+							}),
+							options: nil,
+						},
 					},
 					Errors: []client.Object{},
 				},
@@ -128,9 +131,10 @@ func TestLoadTestSteps(t *testing.T) {
 						},
 					},
 					Asserts: []assertArray{
-						{object: testutils.WithStatus(t, testutils.NewPod("test4", ""), map[string]interface{}{
-							"qosClass": "BestEffort",
-						})},
+						{
+							object: testutils.WithStatus(t, testutils.NewPod("test3", ""), map[string]interface{}{
+								"qosClass": "BestEffort",
+							})},
 					},
 					Errors: []client.Object{},
 				},
@@ -172,7 +176,7 @@ func TestLoadTestSteps(t *testing.T) {
 						},
 					},
 					Asserts: []assertArray{
-						{object: testutils.WithStatus(t, testutils.NewPod("test6", ""), map[string]interface{}{
+						{object: testutils.WithStatus(t, testutils.NewPod("test5", ""), map[string]interface{}{
 							"restartPolicy": "Never",
 						})},
 					},
