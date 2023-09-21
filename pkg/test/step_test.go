@@ -292,7 +292,7 @@ func TestRun(t *testing.T) {
 				Apply: []apply{
 					{object: testutils.NewPod("hello", "")},
 				},
-				Asserts: []asserts_array{
+				Asserts: []assertArray{
 					{object: testutils.NewPod("hello", "")},
 				},
 			},
@@ -302,7 +302,7 @@ func TestRun(t *testing.T) {
 				Apply: []apply{
 					{object: testutils.NewPod("hello", "")},
 				},
-				Asserts: []asserts_array{
+				Asserts: []assertArray{
 					{object: testutils.WithStatus(t, testutils.NewPod("hello", ""), map[string]interface{}{
 						"phase": "Ready",
 					})},
@@ -314,7 +314,7 @@ func TestRun(t *testing.T) {
 				Apply: []apply{
 					{object: testutils.NewPod("hello", "")},
 				},
-				Asserts: []asserts_array{
+				Asserts: []assertArray{
 					{object: testutils.WithStatus(t, testutils.NewPod("hello", ""), map[string]interface{}{
 						"phase": "Ready",
 					})},

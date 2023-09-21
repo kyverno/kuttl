@@ -37,7 +37,7 @@ type apply struct {
 	shouldFail bool
 }
 
-type asserts_array struct {
+type assertArray struct {
 	object     client.Object
 	shouldfail bool
 	options    *harness.Options
@@ -55,7 +55,7 @@ type Step struct {
 	Step   *harness.TestStep
 	Assert *harness.TestAssert
 
-	Asserts []asserts_array
+	Asserts []assertArray
 	Apply   []apply
 	Errors  []client.Object
 
@@ -619,7 +619,7 @@ func (s *Step) LoadYAML(file string) error {
 		return fmt.Errorf("populating step: %v", err)
 	}
 
-	asserts := []asserts_array{}
+	asserts := []assertArray{}
 
 	for _, assert := range s.Asserts {
 		obj := assert.object
@@ -684,7 +684,7 @@ func (s *Step) LoadYAML(file string) error {
 				return fmt.Errorf("step %q assert path %s: %w", s.Name, exAssert, err)
 			}
 			for _, a := range assert {
-				asserts = append(asserts, asserts_array{object: a, shouldfail: assertArray.ShouldFail, options: assertArray.Options})
+				asserts = append(asserts, assertArray{object: a, shouldfail: assertArray.ShouldFail, options: assertArray.Options})
 			}
 		}
 		// process configured errors
@@ -714,7 +714,7 @@ func (s *Step) populateObjectsByFileName(fileName string, objects []client.Objec
 	switch fname := strings.ToLower(matches[1]); fname {
 	case "assert":
 		for _, obj := range objects {
-			s.Asserts = append(s.Asserts, asserts_array{object: obj})
+			s.Asserts = append(s.Asserts, assertArray{object: obj})
 		}
 	case "errors":
 		s.Errors = append(s.Errors, objects...)
