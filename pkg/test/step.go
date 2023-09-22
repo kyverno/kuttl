@@ -378,17 +378,6 @@ func (s *Step) CheckResource(expected assertArray, namespace string) []error {
 	return testErrors
 }
 
-func (s *Step) extractDataFromObject(obj client.Object, path string, resourceType string) ([]interface{}, error) {
-	data, found, err := unstructured.NestedSlice(obj.(runtime.Unstructured).UnstructuredContent(), strings.Split(path, "/")...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to extract data from resource type %s at path '%s'. Error: %v", resourceType, path, err)
-	}
-	if !found {
-		return nil, fmt.Errorf("path '%s' not found in resource of type %s", path, resourceType)
-	}
-	return data, nil
-}
-
 // CheckResourceAbsent checks if the expected resource's state is absent in Kubernetes.
 func (s *Step) CheckResourceAbsent(expected runtime.Object, namespace string) error {
 	cl, err := s.Client(false)
