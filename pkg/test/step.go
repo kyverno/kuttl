@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
 	"regexp"
 	"strings"
 	"testing"
@@ -16,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -25,6 +23,7 @@ import (
 	"github.com/kyverno/kuttl/pkg/env"
 	kfile "github.com/kyverno/kuttl/pkg/file"
 	"github.com/kyverno/kuttl/pkg/http"
+	"github.com/kyverno/kuttl/pkg/test/utils"
 	testutils "github.com/kyverno/kuttl/pkg/test/utils"
 )
 
@@ -291,7 +290,7 @@ func list(cl client.Client, gvk schema.GroupVersionKind, namespace string) ([]un
 }
 
 // CheckResource checks if the expected resource's state in Kubernetes is correct.
-func (s *Step) CheckResource(expected runtime.Object, namespace string) []error {
+func (s *Step) CheckResource(expected assertArray, namespace string) []error {
 	cl, err := s.Client(false)
 	if err != nil {
 		return []error{err}
@@ -304,12 +303,12 @@ func (s *Step) CheckResource(expected runtime.Object, namespace string) []error 
 
 	testErrors := []error{}
 
-	name, namespace, err := testutils.Namespaced(dClient, expected, namespace)
+	name, namespace, err := testutils.Namespaced(dClient, expected.object, namespace)
 	if err != nil {
 		return append(testErrors, err)
 	}
 
-	gvk := expected.GetObjectKind().GroupVersionKind()
+	gvk := expected.object.GetObjectKind().GroupVersionKind()
 
 	actuals := []unstructured.Unstructured{}
 
@@ -333,9 +332,24 @@ func (s *Step) CheckResource(expected runtime.Object, namespace string) []error 
 		return append(testErrors, err)
 	}
 
-	expectedObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(expected)
+	expectedObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(expected.object)
 	if err != nil {
 		return append(testErrors, err)
+	}
+
+	strategyFactory := func(path string) utils.ArrayComparisonStrategy {
+		for _, assertArr := range expected.options.AssertArray {
+			if assertArr.Path == path {
+				switch assertArr.Strategy {
+				case harness.StrategyExact:
+					return utils.StrategyExact(path)
+				case harness.StrategyAnywhere:
+					return utils.StrategyAnywhere(path)
+				}
+			}
+		}
+		// Default strategy if no match is found
+		return utils.StrategyExact(path)
 	}
 
 	for _, actual := range actuals {
@@ -343,15 +357,15 @@ func (s *Step) CheckResource(expected runtime.Object, namespace string) []error 
 
 		tmpTestErrors := []error{}
 
-		if err := testutils.IsSubset(expectedObj, actual.UnstructuredContent()); err != nil {
-			diff, diffErr := testutils.PrettyDiff(expected, &actual)
+		if err := testutils.IsSubset(expectedObj, actual.UnstructuredContent(), "", strategyFactory); err != nil {
+			diff, diffErr := testutils.PrettyDiff(expected.object, &actual)
 			if diffErr == nil {
 				tmpTestErrors = append(tmpTestErrors, fmt.Errorf(diff))
 			} else {
 				tmpTestErrors = append(tmpTestErrors, diffErr)
 			}
 
-			tmpTestErrors = append(tmpTestErrors, fmt.Errorf("resource %s: %s", testutils.ResourceID(expected), err))
+			tmpTestErrors = append(tmpTestErrors, fmt.Errorf("resource %s: %s", testutils.ResourceID(expected.object), err))
 		}
 
 		if len(tmpTestErrors) == 0 {
@@ -373,56 +387,6 @@ func (s *Step) extractDataFromObject(obj client.Object, path string, resourceTyp
 		return nil, fmt.Errorf("path '%s' not found in resource of type %s", path, resourceType)
 	}
 	return data, nil
-}
-
-// validateAssertArray contains the logic to validate an individual AssertArray entry.
-func (s *Step) validateAssertArray(obj client.Object, option harness.AssertArray) []error {
-	var validationErrors []error
-
-	actualObject, err := s.GetCurrentResource(obj)
-	if err != nil {
-		return append(validationErrors, err)
-	}
-
-	// Extract the data from the current object based on the assert.path
-	actualData, err := s.extractDataFromObject(actualObject, option.Path, actualObject.GetObjectKind().GroupVersionKind().String())
-	if err != nil {
-		validationErrors = append(validationErrors, err)
-	}
-
-	// Match the expected data (from assert.object) with the extracted data
-	expectedData, err := s.extractDataFromObject(obj, option.Path, obj.GetObjectKind().GroupVersionKind().String())
-	if err != nil {
-		validationErrors = append(validationErrors, err)
-	}
-
-	// If we had no errors extracting both actual and expected data, proceed with the equality check.
-	if len(validationErrors) == 0 {
-		return append(validationErrors, checkEquals(option, actualData, expectedData))
-	}
-	return validationErrors
-}
-
-func checkEquals(option harness.AssertArray, actualData, expectedData []interface{}) error {
-	var validationError error
-	if option.Strategy == "" {
-		option.Strategy = harness.StrategyAnywhere
-	}
-
-	switch option.Strategy {
-	case harness.StrategyAnywhere:
-		if !contains(actualData, expectedData) {
-			validationError = fmt.Errorf("expected data not found in current resource")
-		}
-	case harness.StrategyExact:
-		if !reflect.DeepEqual(actualData, expectedData) {
-			validationError = fmt.Errorf("data in current resource doesn't match exactly with expected data")
-		}
-	default:
-		validationError = fmt.Errorf("unknown strategy: %s", option.Strategy)
-	}
-
-	return validationError
 }
 
 // CheckResourceAbsent checks if the expected resource's state is absent in Kubernetes.
@@ -476,7 +440,8 @@ func (s *Step) CheckResourceAbsent(expected runtime.Object, namespace string) er
 
 	var unexpectedObjects []unstructured.Unstructured
 	for _, actual := range actuals {
-		if err := testutils.IsSubset(expectedObj, actual.UnstructuredContent()); err == nil {
+		// To be fixed later
+		if err := testutils.IsSubset(expectedObj, actual.UnstructuredContent(), "", nil); err == nil {
 			unexpectedObjects = append(unexpectedObjects, actual)
 		}
 	}
@@ -505,26 +470,13 @@ func (s *Step) Check(namespace string, timeout int) []error {
 	testErrors := []error{}
 
 	for _, expected := range s.Asserts {
-		if expected.options != nil {
-			for _, option := range expected.options.AssertArray {
-				err := s.validateAssertArray(expected.object, option)
-				if err != nil && !expected.shouldfail {
-					testErrors = append(testErrors, err...)
-				}
-				// if there was no error but we expected one
-				if err == nil && expected.shouldfail {
-					testErrors = append(testErrors, errors.New("an error was expected but didn't happen"))
-				}
-			}
-		} else {
-			err := s.CheckResource(expected.object, namespace)
-			if err != nil && !expected.shouldfail {
-				testErrors = append(testErrors, err...)
-			}
-			// if there was no error but we expected one
-			if err == nil && expected.shouldfail {
-				testErrors = append(testErrors, errors.New("an error was expected but didn't happen"))
-			}
+		err := append(testErrors, s.CheckResource(expected, namespace)...)
+		if err != nil && !expected.shouldfail {
+			testErrors = append(testErrors, err...)
+		}
+		// if there was no error but we expected one
+		if err == nil && expected.shouldfail {
+			testErrors = append(testErrors, errors.New("an error was expected but didn't happen"))
 		}
 	}
 
@@ -746,40 +698,6 @@ func (s *Step) populateObjectsByFileName(fileName string, objects []client.Objec
 	}
 
 	return nil
-}
-
-func (s *Step) GetCurrentResource(expectedObj client.Object) (client.Object, error) {
-	c, err := s.Client(false)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get client: %v", err)
-	}
-
-	// Fetch the object based on its GVK and namespace/name
-	gvk := expectedObj.GetObjectKind().GroupVersionKind()
-	namespacedName := types.NamespacedName{
-		Namespace: expectedObj.GetNamespace(),
-		Name:      expectedObj.GetName(),
-	}
-
-	// Create an empty object to receive the fetched data
-	fetchedObj := &unstructured.Unstructured{}
-	fetchedObj.SetGroupVersionKind(gvk)
-
-	err = c.Get(context.TODO(), namespacedName, fetchedObj)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get %s resource: %v", gvk.String(), err)
-	}
-
-	return fetchedObj, nil
-}
-
-func contains(mainSlice, subSlice []interface{}) bool {
-	for _, m := range mainSlice {
-		if reflect.DeepEqual(m, subSlice) {
-			return true
-		}
-	}
-	return false
 }
 
 // ObjectsFromPath returns an array of runtime.Objects for files / urls provided
