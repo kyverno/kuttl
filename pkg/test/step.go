@@ -337,7 +337,7 @@ func (s *Step) CheckResource(expected assertArray, namespace string) []error {
 		return append(testErrors, err)
 	}
 
-	strategyFactory := func(path string) utils.ArrayComparisonStrategy {
+	testutils.StrategyFactory = func(path string) utils.ArrayComparisonStrategy {
 		for _, assertArr := range expected.options.AssertArray {
 			if assertArr.Path == path {
 				switch assertArr.Strategy {
@@ -357,7 +357,7 @@ func (s *Step) CheckResource(expected assertArray, namespace string) []error {
 
 		tmpTestErrors := []error{}
 
-		if err := testutils.IsSubset(expectedObj, actual.UnstructuredContent(), "", strategyFactory); err != nil {
+		if err := testutils.IsSubset(expectedObj, actual.UnstructuredContent(), "", testutils.StrategyFactory); err != nil {
 			diff, diffErr := testutils.PrettyDiff(expected.object, &actual)
 			if diffErr == nil {
 				tmpTestErrors = append(tmpTestErrors, fmt.Errorf(diff))

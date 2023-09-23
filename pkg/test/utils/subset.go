@@ -8,6 +8,8 @@ import (
 type ArrayComparisonStrategyFactory func(path string) ArrayComparisonStrategy
 type ArrayComparisonStrategy func(actualData, expectedData []interface{}) error
 
+var StrategyFactory ArrayComparisonStrategyFactory
+
 // SubsetError is an error type used by IsSubset for tracking the path in the struct.
 type SubsetError struct {
 	path    []string
@@ -105,7 +107,7 @@ func StrategyAnywhere(path string) ArrayComparisonStrategy {
 			matched := false
 			for _, actualItem := range actualData {
 				newPath := path + fmt.Sprintf("[%d]", i)
-				if err := IsSubset(expectedItem, actualItem, newPath, nil); err == nil {
+				if err := IsSubset(expectedItem, actualItem, newPath, StrategyFactory); err == nil {
 					matched = true
 					break
 				}
@@ -125,7 +127,7 @@ func StrategyExact(path string) ArrayComparisonStrategy {
 		}
 		for i, v := range expectedData {
 			newPath := path + fmt.Sprintf("[%d]", i)
-			if err := IsSubset(v, actualData[i], newPath, nil); err != nil {
+			if err := IsSubset(v, actualData[i], newPath, StrategyFactory); err != nil {
 				return err
 			}
 		}
