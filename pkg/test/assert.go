@@ -36,7 +36,7 @@ func Assert(namespace string, timeout int, assertFiles ...string) error {
 		// start fresh
 		testErrors = []error{}
 		for _, expected := range objects {
-			testErrors = append(testErrors, s.CheckResource(asserts{object: expected}, namespace)...)
+			testErrors = append(testErrors, s.CheckResource(expected, namespace)...)
 		}
 
 		if len(testErrors) == 0 {

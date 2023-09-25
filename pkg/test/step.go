@@ -287,7 +287,7 @@ func list(cl client.Client, gvk schema.GroupVersionKind, namespace string) ([]un
 }
 
 // CheckResource checks if the expected resource's state in Kubernetes is correct.
-func (s *Step) CheckResource(expected asserts, namespace string) []error {
+func (s *Step) CheckResource(expected runtime.Object, namespace string) []error {
 	cl, err := s.Client(false)
 	if err != nil {
 		return []error{err}
@@ -300,12 +300,12 @@ func (s *Step) CheckResource(expected asserts, namespace string) []error {
 
 	testErrors := []error{}
 
-	name, namespace, err := testutils.Namespaced(dClient, expected.object, namespace)
+	name, namespace, err := testutils.Namespaced(dClient, expected, namespace)
 	if err != nil {
 		return append(testErrors, err)
 	}
 
-	gvk := expected.object.GetObjectKind().GroupVersionKind()
+	gvk := expected.GetObjectKind().GroupVersionKind()
 
 	actuals := []unstructured.Unstructured{}
 
@@ -329,7 +329,7 @@ func (s *Step) CheckResource(expected asserts, namespace string) []error {
 		return append(testErrors, err)
 	}
 
-	expectedObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(expected.object)
+	expectedObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(expected)
 	if err != nil {
 		return append(testErrors, err)
 	}
@@ -340,14 +340,14 @@ func (s *Step) CheckResource(expected asserts, namespace string) []error {
 		tmpTestErrors := []error{}
 
 		if err := testutils.IsSubset(expectedObj, actual.UnstructuredContent()); err != nil {
-			diff, diffErr := testutils.PrettyDiff(expected.object, &actual)
+			diff, diffErr := testutils.PrettyDiff(expected, &actual)
 			if diffErr == nil {
 				tmpTestErrors = append(tmpTestErrors, fmt.Errorf(diff))
 			} else {
 				tmpTestErrors = append(tmpTestErrors, diffErr)
 			}
 
-			tmpTestErrors = append(tmpTestErrors, fmt.Errorf("resource %s: %s", testutils.ResourceID(expected.object), err))
+			tmpTestErrors = append(tmpTestErrors, fmt.Errorf("resource %s: %s", testutils.ResourceID(expected), err))
 		}
 
 		if len(tmpTestErrors) == 0 {
@@ -440,7 +440,7 @@ func (s *Step) Check(namespace string, timeout int) []error {
 	testErrors := []error{}
 
 	for _, expected := range s.Asserts {
-		testErrors = append(testErrors, s.CheckResource(expected, namespace)...)
+		testErrors = append(testErrors, s.CheckResource(expected.object, namespace)...)
 	}
 
 	if s.Assert != nil {

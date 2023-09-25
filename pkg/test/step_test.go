@@ -141,8 +141,8 @@ func TestStepDeleteExisting(t *testing.T) {
 func TestCheckResource(t *testing.T) {
 	for _, test := range []struct {
 		testName    string
-		actual      client.Object
-		expected    client.Object
+		actual      runtime.Object
+		expected    runtime.Object
 		shouldError bool
 	}{
 		{
@@ -190,7 +190,7 @@ func TestCheckResource(t *testing.T) {
 				DiscoveryClient: func() (discovery.DiscoveryInterface, error) { return fakeDiscovery, nil },
 			}
 
-			errors := step.CheckResource(asserts{object: test.expected}, namespace)
+			errors := step.CheckResource(test.expected, namespace)
 
 			if test.shouldError {
 				assert.NotEqual(t, []error{}, errors)
