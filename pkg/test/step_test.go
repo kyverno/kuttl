@@ -141,8 +141,8 @@ func TestStepDeleteExisting(t *testing.T) {
 func TestCheckResource(t *testing.T) {
 	for _, test := range []struct {
 		testName    string
-		actual      runtime.Object
-		expected    runtime.Object
+		actual      client.Object
+		expected    client.Object
 		shouldError bool
 	}{
 		{
@@ -190,7 +190,7 @@ func TestCheckResource(t *testing.T) {
 				DiscoveryClient: func() (discovery.DiscoveryInterface, error) { return fakeDiscovery, nil },
 			}
 
-			errors := step.CheckResource(test.expected, namespace)
+			errors := step.CheckResource(asserts{object: test.expected}, namespace)
 
 			if test.shouldError {
 				assert.NotEqual(t, []error{}, errors)
@@ -287,12 +287,13 @@ func TestRun(t *testing.T) {
 		updateMethod func(*testing.T, client.Client)
 	}{
 		{
-			testName: "successful run", Step: Step{
+			testName: "successful run",
+			Step: Step{
 				Apply: []apply{
 					{object: testutils.NewPod("hello", "")},
 				},
-				Asserts: []client.Object{
-					testutils.NewPod("hello", ""),
+				Asserts: []asserts{
+					{object: testutils.NewPod("hello", "")},
 				},
 			},
 		},
@@ -301,10 +302,10 @@ func TestRun(t *testing.T) {
 				Apply: []apply{
 					{object: testutils.NewPod("hello", "")},
 				},
-				Asserts: []client.Object{
-					testutils.WithStatus(t, testutils.NewPod("hello", ""), map[string]interface{}{
+				Asserts: []asserts{
+					{object: testutils.WithStatus(t, testutils.NewPod("hello", ""), map[string]interface{}{
 						"phase": "Ready",
-					}),
+					})},
 				},
 			}, nil,
 		},
@@ -313,10 +314,10 @@ func TestRun(t *testing.T) {
 				Apply: []apply{
 					{object: testutils.NewPod("hello", "")},
 				},
-				Asserts: []client.Object{
-					testutils.WithStatus(t, testutils.NewPod("hello", ""), map[string]interface{}{
+				Asserts: []asserts{
+					{object: testutils.WithStatus(t, testutils.NewPod("hello", ""), map[string]interface{}{
 						"phase": "Ready",
-					}),
+					})},
 				},
 			}, func(t *testing.T, client client.Client) {
 				pod := testutils.NewPod("hello", testNamespace)

@@ -35,6 +35,10 @@ type apply struct {
 	shouldFail bool
 }
 
+type asserts struct {
+	object client.Object
+}
+
 // A Step contains the name of the test step, its index in the test,
 // and all of the test step's settings (including objects to apply and assert on).
 type Step struct {
@@ -47,7 +51,7 @@ type Step struct {
 	Step   *harness.TestStep
 	Assert *harness.TestAssert
 
-	Asserts []client.Object
+	Asserts []asserts
 	Apply   []apply
 	Errors  []client.Object
 
@@ -283,7 +287,7 @@ func list(cl client.Client, gvk schema.GroupVersionKind, namespace string) ([]un
 }
 
 // CheckResource checks if the expected resource's state in Kubernetes is correct.
-func (s *Step) CheckResource(expected runtime.Object, namespace string) []error {
+func (s *Step) CheckResource(expected asserts, namespace string) []error {
 	cl, err := s.Client(false)
 	if err != nil {
 		return []error{err}
@@ -296,12 +300,12 @@ func (s *Step) CheckResource(expected runtime.Object, namespace string) []error 
 
 	testErrors := []error{}
 
-	name, namespace, err := testutils.Namespaced(dClient, expected, namespace)
+	name, namespace, err := testutils.Namespaced(dClient, expected.object, namespace)
 	if err != nil {
 		return append(testErrors, err)
 	}
 
-	gvk := expected.GetObjectKind().GroupVersionKind()
+	gvk := expected.object.GetObjectKind().GroupVersionKind()
 
 	actuals := []unstructured.Unstructured{}
 
@@ -325,7 +329,7 @@ func (s *Step) CheckResource(expected runtime.Object, namespace string) []error 
 		return append(testErrors, err)
 	}
 
-	expectedObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(expected)
+	expectedObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(expected.object)
 	if err != nil {
 		return append(testErrors, err)
 	}
@@ -336,14 +340,14 @@ func (s *Step) CheckResource(expected runtime.Object, namespace string) []error 
 		tmpTestErrors := []error{}
 
 		if err := testutils.IsSubset(expectedObj, actual.UnstructuredContent()); err != nil {
-			diff, diffErr := testutils.PrettyDiff(expected, &actual)
+			diff, diffErr := testutils.PrettyDiff(expected.object, &actual)
 			if diffErr == nil {
 				tmpTestErrors = append(tmpTestErrors, fmt.Errorf(diff))
 			} else {
 				tmpTestErrors = append(tmpTestErrors, diffErr)
 			}
 
-			tmpTestErrors = append(tmpTestErrors, fmt.Errorf("resource %s: %s", testutils.ResourceID(expected), err))
+			tmpTestErrors = append(tmpTestErrors, fmt.Errorf("resource %s: %s", testutils.ResourceID(expected.object), err))
 		}
 
 		if len(tmpTestErrors) == 0 {
@@ -543,9 +547,10 @@ func (s *Step) LoadYAML(file string) error {
 		return fmt.Errorf("populating step: %v", err)
 	}
 
-	asserts := []client.Object{}
+	asserties := []asserts{}
 
-	for _, obj := range s.Asserts {
+	for _, assert := range s.Asserts {
+		obj := assert.object
 		if obj.GetObjectKind().GroupVersionKind().Kind == "TestAssert" {
 			if testAssert, ok := obj.DeepCopyObject().(*harness.TestAssert); ok {
 				s.Assert = testAssert
@@ -553,7 +558,7 @@ func (s *Step) LoadYAML(file string) error {
 				return fmt.Errorf("failed to load TestAssert object from %s: it contains an object of type %T", file, obj)
 			}
 		} else {
-			asserts = append(asserts, obj)
+			asserties = append(asserties, assert)
 		}
 	}
 
@@ -601,12 +606,14 @@ func (s *Step) LoadYAML(file string) error {
 		}
 		// process configured step asserts
 		for _, assertPath := range s.Step.Assert {
-			exAssert := env.Expand(assertPath)
+			exAssert := env.Expand(assertPath.File)
 			assert, err := ObjectsFromPath(exAssert, s.Dir)
 			if err != nil {
 				return fmt.Errorf("step %q assert path %s: %w", s.Name, exAssert, err)
 			}
-			asserts = append(asserts, assert...)
+			for _, a := range assert {
+				asserties = append(asserties, asserts{object: a})
+			}
 		}
 		// process configured errors
 		for _, errorPath := range s.Step.Error {
@@ -620,7 +627,7 @@ func (s *Step) LoadYAML(file string) error {
 	}
 
 	s.Apply = applies
-	s.Asserts = asserts
+	s.Asserts = asserties
 	return nil
 }
 
@@ -634,7 +641,9 @@ func (s *Step) populateObjectsByFileName(fileName string, objects []client.Objec
 
 	switch fname := strings.ToLower(matches[1]); fname {
 	case "assert":
-		s.Asserts = append(s.Asserts, objects...)
+		for _, obj := range objects {
+			s.Asserts = append(s.Asserts, asserts{object: obj})
+		}
 	case "errors":
 		s.Errors = append(s.Errors, objects...)
 	default:
@@ -704,7 +713,7 @@ func validateTestStep(ts *harness.TestStep, baseDir string) error {
 	}
 	// Check if referenced files in  Assert  exist
 	for _, assert := range ts.Assert {
-		path := filepath.Join(baseDir, assert)
+		path := filepath.Join(baseDir, assert.File)
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			return fmt.Errorf("referenced file in Assert does not exist: %s", path)
 		}
