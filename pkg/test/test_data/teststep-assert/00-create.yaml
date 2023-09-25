@@ -5,5 +5,5 @@ apply:
   - hello1-pod.yaml
   - hello2/hello2-pod.yaml
 assert:
-  - hello1-assert.yaml
-  - hello2/hello2-assert.yaml
+  - file: hello1-assert.yaml
+  - file: hello2/hello2-assert.yaml

@@ -133,7 +133,7 @@ type TestStep struct {
 	// Useful to reuse a number of applies across tests / test steps.
 	// all relative paths are relative to the folder the TestStep is defined in.
 	Apply  []Apply  `json:"apply,omitempty"`
-	Assert []string `json:"assert,omitempty"`
+	Assert []Assert `json:"assert,omitempty"`
 	Error  []string `json:"error,omitempty"`
 
 	// Objects to delete at the beginning of the test step.
@@ -150,6 +150,26 @@ type TestStep struct {
 
 	// Kubeconfig to use when applying and asserting for this step.
 	Kubeconfig string `json:"kubeconfig,omitempty"`
+}
+
+type Assert struct {
+	// File specifies the relative or full path to the YAML containing the expected content.
+	File string `json:"file"`
+}
+
+// UnmarshalJSON implements the json.Unmarshaller interface.
+func (assert *Assert) UnmarshalJSON(value []byte) error {
+	if value[0] == '"' {
+		return json.Unmarshal(value, &assert.File)
+	}
+	data := struct {
+		File string `json:"file,omitempty"`
+	}{}
+	if err := json.Unmarshal(value, &data); err != nil {
+		return err
+	}
+	assert.File = data.File
+	return nil
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
