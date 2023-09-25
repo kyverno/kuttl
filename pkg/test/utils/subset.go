@@ -61,20 +61,8 @@ func IsSubset(expected, actual interface{}, currentPath string, strategyFactory 
 			strategy = StrategyExact(currentPath)
 		}
 
-		expectedVal := reflect.ValueOf(expected)
-		actualVal := reflect.ValueOf(actual)
+		return strategy(toSlice(expected), toSlice(actual))
 
-		expectedData := make([]interface{}, expectedVal.Len())
-		actualData := make([]interface{}, actualVal.Len())
-
-		for i := 0; i < expectedVal.Len(); i++ {
-			expectedData[i] = expectedVal.Index(i).Interface()
-		}
-		for i := 0; i < actualVal.Len(); i++ {
-			actualData[i] = actualVal.Index(i).Interface()
-		}
-
-		return strategy(expectedData, actualData)
 	case reflect.Map:
 		iter := reflect.ValueOf(expected).MapRange()
 
@@ -139,4 +127,13 @@ func StrategyExact(path string) ArrayComparisonStrategy {
 		}
 		return nil
 	}
+}
+
+func toSlice(v interface{}) []interface{} {
+	value := reflect.ValueOf(v)
+	slice := make([]interface{}, value.Len())
+	for i := 0; i < value.Len(); i++ {
+		slice[i] = value.Index(i).Interface()
+	}
+	return slice
 }
