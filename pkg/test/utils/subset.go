@@ -6,7 +6,7 @@ import (
 )
 
 type ArrayComparisonStrategyFactory = func(path string) ArrayComparisonStrategy
-type ArrayComparisonStrategy = func(expectedData, actualData []interface{}) error
+type ArrayComparisonStrategy = func(expectedData, actualData interface{}) error
 
 var StrategyFactory ArrayComparisonStrategyFactory
 
@@ -61,7 +61,7 @@ func IsSubset(expected, actual interface{}, currentPath string, strategyFactory 
 			strategy = StrategyExact(currentPath)
 		}
 
-		return strategy(toSlice(expected), toSlice(actual))
+		return strategy(expected, actual)
 
 	case reflect.Map:
 		iter := reflect.ValueOf(expected).MapRange()
@@ -96,7 +96,10 @@ func IsSubset(expected, actual interface{}, currentPath string, strategyFactory 
 }
 
 func StrategyAnywhere(path string) ArrayComparisonStrategy {
-	return func(expectedData, actualData []interface{}) error {
+	return func(expected, actual interface{}) error {
+		expectedData := toSlice(expected)
+		actualData := toSlice(actual)
+
 		for i, expectedItem := range expectedData {
 			matched := false
 			for _, actualItem := range actualData {
@@ -115,10 +118,15 @@ func StrategyAnywhere(path string) ArrayComparisonStrategy {
 }
 
 func StrategyExact(path string) ArrayComparisonStrategy {
-	return func(expectedData, actualData []interface{}) error {
-		if len(expectedData) != len(actualData) {
-			return &SubsetError{message: fmt.Sprintf("slice length mismatch at path %s: %d != %d", path, len(expectedData), len(actualData))}
+	return func(expected, actual interface{}) error {
+
+		if reflect.ValueOf(expected).Len() != reflect.ValueOf(actual).Len() {
+			return &SubsetError{message: fmt.Sprintf("slice length mismatch at path %s: %d != %d", path, reflect.ValueOf(expected).Len(), reflect.ValueOf(actual).Len())}
 		}
+
+		expectedData := toSlice(expected)
+		actualData := toSlice(actual)
+
 		for i, v := range expectedData {
 			newPath := path + fmt.Sprintf("[%d]", i)
 			if err := IsSubset(v, actualData[i], newPath, StrategyFactory); err != nil {
