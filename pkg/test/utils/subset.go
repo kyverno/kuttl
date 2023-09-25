@@ -5,8 +5,8 @@ import (
 	"reflect"
 )
 
-type ArrayComparisonStrategyFactory func(path string) ArrayComparisonStrategy
-type ArrayComparisonStrategy func(expectedData, actualData []interface{}) error
+type ArrayComparisonStrategyFactory = func(path string) ArrayComparisonStrategy
+type ArrayComparisonStrategy = func(expectedData, actualData []interface{}) error
 
 var StrategyFactory ArrayComparisonStrategyFactory
 
