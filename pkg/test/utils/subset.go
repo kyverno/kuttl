@@ -8,8 +8,6 @@ import (
 type ArrayComparisonStrategyFactory = func(path string) ArrayComparisonStrategy
 type ArrayComparisonStrategy = func(expectedData, actualData interface{}) error
 
-var StrategyFactory ArrayComparisonStrategyFactory
-
 // SubsetError is an error type used by IsSubset for tracking the path in the struct.
 type SubsetError struct {
 	path    []string
@@ -54,10 +52,12 @@ func IsSubset(expected, actual interface{}, currentPath string, strategyFactory 
 
 	switch reflect.TypeOf(expected).Kind() {
 	case reflect.Slice:
+		var strategy ArrayComparisonStrategy
 		if strategyFactory == nil {
-			strategyFactory = StrategyExact
+			strategy = StrategyExact(currentPath, strategyFactory)
+		} else {
+			strategy = strategyFactory(currentPath)
 		}
-		strategy := strategyFactory(currentPath)
 
 		return strategy(expected, actual)
 
@@ -93,7 +93,7 @@ func IsSubset(expected, actual interface{}, currentPath string, strategyFactory 
 	return nil
 }
 
-func StrategyAnywhere(path string) ArrayComparisonStrategy {
+func StrategyAnywhere(path string, strategyFactory ArrayComparisonStrategyFactory) ArrayComparisonStrategy {
 	return func(expected, actual interface{}) error {
 		expectedData := toSlice(expected)
 		actualData := toSlice(actual)
@@ -102,7 +102,7 @@ func StrategyAnywhere(path string) ArrayComparisonStrategy {
 			matched := false
 			for _, actualItem := range actualData {
 				newPath := path + fmt.Sprintf("[%d]", i)
-				if err := IsSubset(expectedItem, actualItem, newPath, StrategyFactory); err == nil {
+				if err := IsSubset(expectedItem, actualItem, newPath, strategyFactory); err == nil {
 					matched = true
 					break
 				}
@@ -115,7 +115,7 @@ func StrategyAnywhere(path string) ArrayComparisonStrategy {
 	}
 }
 
-func StrategyExact(path string) ArrayComparisonStrategy {
+func StrategyExact(path string, strategyFactory ArrayComparisonStrategyFactory) ArrayComparisonStrategy {
 	return func(expected, actual interface{}) error {
 
 		if reflect.ValueOf(expected).Len() != reflect.ValueOf(actual).Len() {
@@ -124,7 +124,7 @@ func StrategyExact(path string) ArrayComparisonStrategy {
 
 		for i := 0; i < reflect.ValueOf(expected).Len(); i++ {
 			newPath := path + fmt.Sprintf("[%d]", i)
-			if err := IsSubset(reflect.ValueOf(expected).Index(i).Interface(), reflect.ValueOf(actual).Index(i).Interface(), newPath, StrategyFactory); err != nil {
+			if err := IsSubset(reflect.ValueOf(expected).Index(i).Interface(), reflect.ValueOf(actual).Index(i).Interface(), newPath, strategyFactory); err != nil {
 				return err
 			}
 		}

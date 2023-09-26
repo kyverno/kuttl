@@ -190,7 +190,7 @@ func TestCheckResource(t *testing.T) {
 				DiscoveryClient: func() (discovery.DiscoveryInterface, error) { return fakeDiscovery, nil },
 			}
 
-			errors := step.CheckResource(test.expected, namespace)
+			errors := step.CheckResource(test.expected, namespace, nil)
 
 			if test.shouldError {
 				assert.NotEqual(t, []error{}, errors)
