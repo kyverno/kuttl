@@ -54,12 +54,10 @@ func IsSubset(expected, actual interface{}, currentPath string, strategyFactory 
 
 	switch reflect.TypeOf(expected).Kind() {
 	case reflect.Slice:
-		var strategy ArrayComparisonStrategy
-		if strategyFactory != nil {
-			strategy = strategyFactory(currentPath)
-		} else {
-			strategy = StrategyExact(currentPath)
+		if strategyFactory == nil {
+			strategyFactory = StrategyExact
 		}
+		strategy := strategyFactory(currentPath)
 
 		return strategy(expected, actual)
 
@@ -124,15 +122,13 @@ func StrategyExact(path string) ArrayComparisonStrategy {
 			return &SubsetError{message: fmt.Sprintf("slice length mismatch at path %s: %d != %d", path, reflect.ValueOf(expected).Len(), reflect.ValueOf(actual).Len())}
 		}
 
-		expectedData := toSlice(expected)
-		actualData := toSlice(actual)
-
-		for i, v := range expectedData {
+		for i := 0; i < reflect.ValueOf(expected).Len(); i++ {
 			newPath := path + fmt.Sprintf("[%d]", i)
-			if err := IsSubset(v, actualData[i], newPath, StrategyFactory); err != nil {
+			if err := IsSubset(reflect.ValueOf(expected).Index(i).Interface(), reflect.ValueOf(actual).Index(i).Interface(), newPath, StrategyFactory); err != nil {
 				return err
 			}
 		}
+
 		return nil
 	}
 }
