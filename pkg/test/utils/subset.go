@@ -117,18 +117,15 @@ func StrategyAnywhere(path string, strategyFactory ArrayComparisonStrategyFactor
 
 func StrategyExact(path string, strategyFactory ArrayComparisonStrategyFactory) ArrayComparisonStrategy {
 	return func(expected, actual interface{}) error {
-
 		if reflect.ValueOf(expected).Len() != reflect.ValueOf(actual).Len() {
 			return &SubsetError{message: fmt.Sprintf("slice length mismatch at path %s: %d != %d", path, reflect.ValueOf(expected).Len(), reflect.ValueOf(actual).Len())}
 		}
-
 		for i := 0; i < reflect.ValueOf(expected).Len(); i++ {
 			newPath := path + fmt.Sprintf("[%d]", i)
 			if err := IsSubset(reflect.ValueOf(expected).Index(i).Interface(), reflect.ValueOf(actual).Index(i).Interface(), newPath, strategyFactory); err != nil {
 				return err
 			}
 		}
-
 		return nil
 	}
 }
