@@ -166,6 +166,10 @@ type Assert struct {
 }
 
 type Options struct {
+	Kind        string        `json:"kind,omitempty"`
+	ApiVersion  string        `json:"apiVersion,omitempty"`
+	Name        string        `json:"name,omitempty"`
+	Namespace   string        `json:"namespace,omitempty"`
 	AssertArray []AssertArray `json:"arrays,omitempty"`
 }
 
