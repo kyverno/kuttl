@@ -36,7 +36,8 @@ type apply struct {
 }
 
 type asserts struct {
-	object client.Object
+	object  client.Object
+	options *harness.Options
 }
 
 // A Step contains the name of the test step, its index in the test,
@@ -287,7 +288,7 @@ func list(cl client.Client, gvk schema.GroupVersionKind, namespace string) ([]un
 }
 
 // CheckResource checks if the expected resource's state in Kubernetes is correct.
-func (s *Step) CheckResource(expected runtime.Object, namespace string) []error {
+func (s *Step) CheckResource(expected runtime.Object, namespace string, strategyFactory testutils.ArrayComparisonStrategyFactory) []error {
 	cl, err := s.Client(false)
 	if err != nil {
 		return []error{err}
@@ -339,7 +340,7 @@ func (s *Step) CheckResource(expected runtime.Object, namespace string) []error 
 
 		tmpTestErrors := []error{}
 
-		if err := testutils.IsSubset(expectedObj, actual.UnstructuredContent()); err != nil {
+		if err := testutils.IsSubset(expectedObj, actual.UnstructuredContent(), "/", strategyFactory); err != nil {
 			diff, diffErr := testutils.PrettyDiff(expected, &actual)
 			if diffErr == nil {
 				tmpTestErrors = append(tmpTestErrors, fmt.Errorf(diff))
@@ -411,7 +412,7 @@ func (s *Step) CheckResourceAbsent(expected runtime.Object, namespace string) er
 
 	var unexpectedObjects []unstructured.Unstructured
 	for _, actual := range actuals {
-		if err := testutils.IsSubset(expectedObj, actual.UnstructuredContent()); err == nil {
+		if err := testutils.IsSubset(expectedObj, actual.UnstructuredContent(), "/", nil); err == nil {
 			unexpectedObjects = append(unexpectedObjects, actual)
 		}
 	}
@@ -423,6 +424,29 @@ func (s *Step) CheckResourceAbsent(expected runtime.Object, namespace string) er
 		return fmt.Errorf("resource %s %s matched error assertion", unexpectedObjects[0].GroupVersionKind(), unexpectedObjects[0].GetName())
 	}
 	return fmt.Errorf("resource %s %s (and %d other resources) matched error assertion", unexpectedObjects[0].GroupVersionKind(), unexpectedObjects[0].GetName(), len(unexpectedObjects)-1)
+}
+
+// Build StrategyFactory for IsSubset
+func NewStrategyFactory(a asserts) func(path string) testutils.ArrayComparisonStrategy {
+	var strategyFactory func(path string) testutils.ArrayComparisonStrategy
+	recursiveStrategyFactory := func(path string) testutils.ArrayComparisonStrategy {
+		if a.options != nil && len(a.options.AssertArray) > 0 {
+			for _, assertArr := range a.options.AssertArray {
+				if assertArr.Path == path {
+					switch assertArr.Strategy {
+					case harness.StrategyExact:
+						return testutils.StrategyExact(path, strategyFactory)
+					case harness.StrategyAnywhere:
+						return testutils.StrategyAnywhere(path, strategyFactory)
+					}
+				}
+			}
+		}
+		// Default strategy if no match is found
+		return testutils.StrategyExact(path, strategyFactory)
+	}
+	strategyFactory = recursiveStrategyFactory
+	return strategyFactory
 }
 
 // CheckAssertCommands Runs the commands provided in `commands` and check if have been run successfully.
@@ -440,7 +464,8 @@ func (s *Step) Check(namespace string, timeout int) []error {
 	testErrors := []error{}
 
 	for _, expected := range s.Asserts {
-		testErrors = append(testErrors, s.CheckResource(expected.object, namespace)...)
+		strategyFactory := NewStrategyFactory(expected)
+		testErrors = append(testErrors, s.CheckResource(expected.object, namespace, strategyFactory)...)
 	}
 
 	if s.Assert != nil {

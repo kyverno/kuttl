@@ -16,6 +16,13 @@ const (
 	MatchWildcard MatchType = "Wildcard"
 )
 
+type Strategy string
+
+const (
+	StrategyAnywhere Strategy = "Anywhere"
+	StrategyExact    Strategy = "Exact"
+)
+
 // Create embedded struct to implement custom DeepCopyInto method
 type RestConfig struct {
 	RC *rest.Config
@@ -154,7 +161,20 @@ type TestStep struct {
 
 type Assert struct {
 	// File specifies the relative or full path to the YAML containing the expected content.
-	File string `json:"file"`
+	File    string   `json:"file"`
+	Options *Options `json:"options,omitempty"`
+}
+
+type Options struct {
+	AssertArray []AssertArray `json:"arrays,omitempty"`
+}
+
+// AssertArray specifies conditions for verifying content within a YAML against a Kubernetes resource.
+type AssertArray struct {
+	// Path indicates the location within the YAML file to extract data for verification.
+	Path string `json:"path"`
+	// Strategy defines how the extracted data should be compared against the Kubernetes resource.
+	Strategy Strategy `json:"strategy"`
 }
 
 // UnmarshalJSON implements the json.Unmarshaller interface.
@@ -163,12 +183,14 @@ func (assert *Assert) UnmarshalJSON(value []byte) error {
 		return json.Unmarshal(value, &assert.File)
 	}
 	data := struct {
-		File string `json:"file,omitempty"`
+		File    string   `json:"file,omitempty"`
+		Options *Options `json:"options,omitempty"`
 	}{}
 	if err := json.Unmarshal(value, &data); err != nil {
 		return err
 	}
 	assert.File = data.File
+	assert.Options = data.Options
 	return nil
 }
 
