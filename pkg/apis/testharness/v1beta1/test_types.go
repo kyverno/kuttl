@@ -166,10 +166,6 @@ type Assert struct {
 }
 
 type Options struct {
-	Kind        string        `json:"kind,omitempty"`
-	ApiVersion  string        `json:"apiVersion,omitempty"`
-	Name        string        `json:"name,omitempty"`
-	Namespace   string        `json:"namespace,omitempty"`
 	AssertArray []AssertArray `json:"arrays,omitempty"`
 }
 
@@ -178,7 +174,9 @@ type AssertArray struct {
 	// Path indicates the location within the YAML file to extract data for verification.
 	Path string `json:"path"`
 	// Strategy defines how the extracted data should be compared against the Kubernetes resource.
-	Strategy Strategy `json:"strategy"`
+	Strategy Strategy          `json:"strategy"`
+	Metadata metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.TypeMeta
 }
 
 // UnmarshalJSON implements the json.Unmarshaller interface.

@@ -432,20 +432,18 @@ func pathMatches(pattern, path string) bool {
 	return wildcard.Match(strings.TrimSuffix(pattern, "/"), path)
 }
 
-func metadataMatches(opt *harness.Options, obj client.Object) bool {
-	if opt.Name != "" && opt.Name != obj.GetName() {
+func metaTypeMatches(assertArray harness.AssertArray, obj client.Object) bool {
+	unstructuredObj := obj.(*unstructured.Unstructured).Object
+
+	if err := testutils.IsSubset(assertArray.Metadata, unstructuredObj["metadata"], "/", testutils.DefaultStrategyFactory()); err != nil {
 		return false
 	}
 
-	if opt.Namespace != "" && opt.Namespace != obj.GetNamespace() {
+	if err := testutils.IsSubset(assertArray.TypeMeta.Kind, unstructuredObj["kind"], "/", testutils.DefaultStrategyFactory()); err != nil {
 		return false
 	}
 
-	if opt.Kind != "" && opt.Kind != obj.GetObjectKind().GroupVersionKind().Kind {
-		return false
-	}
-
-	if opt.ApiVersion != "" && opt.ApiVersion != obj.GetObjectKind().GroupVersionKind().GroupVersion().String() {
+	if err := testutils.IsSubset(assertArray.TypeMeta.APIVersion, unstructuredObj["apiVersion"], "/", testutils.DefaultStrategyFactory()); err != nil {
 		return false
 	}
 
@@ -456,9 +454,9 @@ func metadataMatches(opt *harness.Options, obj client.Object) bool {
 func NewStrategyFactory(a asserts) func(path string) testutils.ArrayComparisonStrategy {
 	var strategyFactory func(path string) testutils.ArrayComparisonStrategy
 	recursiveStrategyFactory := func(path string) testutils.ArrayComparisonStrategy {
-		if a.options != nil && len(a.options.AssertArray) > 0 && metadataMatches(a.options, a.object) {
+		if a.options != nil && len(a.options.AssertArray) > 0 {
 			for _, assertArr := range a.options.AssertArray {
-				if pathMatches(assertArr.Path, path) {
+				if pathMatches(assertArr.Path, path) && metaTypeMatches(assertArr, a.object) {
 					switch assertArr.Strategy {
 					case harness.StrategyExact:
 						return testutils.StrategyExact(path, strategyFactory)
