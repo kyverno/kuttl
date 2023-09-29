@@ -435,18 +435,19 @@ func pathMatches(pattern, path string) bool {
 func metaTypeMatches(assertArray harness.AssertArray, obj client.Object) bool {
 	unstructuredObj := obj.(*unstructured.Unstructured).Object
 
-	if err := testutils.IsSubset(assertArray.Metadata, unstructuredObj["metadata"], "/", testutils.DefaultStrategyFactory()); err != nil {
-		return false
-	}
+	if assertArray.Match != nil {
+		if err := testutils.IsSubset(assertArray.Match.ObjectMeta, unstructuredObj["metadata"], "/", testutils.DefaultStrategyFactory()); err != nil {
+			return false
+		}
 
-	if err := testutils.IsSubset(assertArray.TypeMeta.Kind, unstructuredObj["kind"], "/", testutils.DefaultStrategyFactory()); err != nil {
-		return false
-	}
+		if err := testutils.IsSubset(assertArray.Match.TypeMeta.Kind, unstructuredObj["kind"], "/", testutils.DefaultStrategyFactory()); err != nil {
+			return false
+		}
 
-	if err := testutils.IsSubset(assertArray.TypeMeta.APIVersion, unstructuredObj["apiVersion"], "/", testutils.DefaultStrategyFactory()); err != nil {
-		return false
+		if err := testutils.IsSubset(assertArray.Match.TypeMeta.APIVersion, unstructuredObj["apiVersion"], "/", testutils.DefaultStrategyFactory()); err != nil {
+			return false
+		}
 	}
-
 	return true
 }
 

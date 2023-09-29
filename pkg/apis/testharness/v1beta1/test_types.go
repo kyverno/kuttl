@@ -174,9 +174,8 @@ type AssertArray struct {
 	// Path indicates the location within the YAML file to extract data for verification.
 	Path string `json:"path"`
 	// Strategy defines how the extracted data should be compared against the Kubernetes resource.
-	Strategy Strategy          `json:"strategy"`
-	Metadata metav1.ObjectMeta `json:"metadata,omitempty"`
-	metav1.TypeMeta
+	Strategy Strategy                      `json:"strategy"`
+	Match    *metav1.PartialObjectMetadata `json:"match,omitempty"`
 }
 
 // UnmarshalJSON implements the json.Unmarshaller interface.
