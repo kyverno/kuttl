@@ -195,5 +195,4 @@ func TestIsSubset(t *testing.T) {
 			},
 		},
 		"", DefaultStrategyFactory()))
-
 }
