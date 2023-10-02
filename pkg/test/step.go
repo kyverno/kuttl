@@ -434,8 +434,14 @@ func pathMatches(pattern, path string) bool {
 
 func metaTypeMatches(assertArray harness.AssertArray, obj client.Object) bool {
 	if assertArray.Match != nil {
-		expected, _ := runtime.DefaultUnstructuredConverter.ToUnstructured(assertArray.Match)
-		actual, _ := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
+		expected, err := runtime.DefaultUnstructuredConverter.ToUnstructured(assertArray.Match)
+		if err != nil {
+			return false
+		}
+		actual, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
+		if err != nil {
+			return false
+		}
 		if err := testutils.IsSubset(expected, actual, "/", testutils.DefaultStrategyFactory()); err != nil {
 			return false
 		}
