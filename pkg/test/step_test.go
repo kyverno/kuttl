@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -393,6 +394,105 @@ func TestPopulateObjectsByFileName(t *testing.T) {
 			if tt.isApply && len(step.Apply) != 0 {
 				assert.Equal(t, tt.name, step.Name)
 			}
+		})
+	}
+}
+
+func TestMetaTypeMatches(t *testing.T) {
+	tests := []struct {
+		name         string
+		assertArray  harness.AssertArray
+		obj          *metav1.PartialObjectMetadata
+		expectedBool bool
+	}{
+		{
+			name: "Matching Subset",
+			assertArray: harness.AssertArray{
+				Match: &metav1.PartialObjectMetadata{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							"key": "value",
+						},
+					},
+				},
+			},
+			obj: &metav1.PartialObjectMetadata{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"key": "value",
+						"foo": "bar",
+					},
+				},
+			},
+			expectedBool: true,
+		},
+		{
+			name: "Non-matching Subset",
+			assertArray: harness.AssertArray{
+				Match: &metav1.PartialObjectMetadata{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							"key": "wrongValue",
+						},
+					},
+				},
+			},
+			obj: &metav1.PartialObjectMetadata{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"key": "value",
+						"foo": "bar",
+					},
+				},
+			},
+			expectedBool: false,
+		},
+		{
+			name: "Empty Annotations in Match",
+			assertArray: harness.AssertArray{
+				Match: &metav1.PartialObjectMetadata{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{},
+					},
+				},
+			},
+			obj: &metav1.PartialObjectMetadata{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"key": "value",
+						"foo": "bar",
+					},
+				},
+			},
+			expectedBool: true,
+		},
+		{
+			name: "Using Labels for Matching",
+			assertArray: harness.AssertArray{
+				Match: &metav1.PartialObjectMetadata{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							"app": "test",
+						},
+					},
+				},
+			},
+			obj: &metav1.PartialObjectMetadata{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": "test",
+						"env": "prod",
+					},
+				},
+			},
+			expectedBool: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := metaTypeMatches(test.assertArray, test.obj)
+			assert.Equal(t, test.expectedBool, result)
 		})
 	}
 }

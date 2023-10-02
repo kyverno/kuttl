@@ -433,10 +433,10 @@ func pathMatches(pattern, path string) bool {
 }
 
 func metaTypeMatches(assertArray harness.AssertArray, obj client.Object) bool {
-	unstructuredObj := obj.(*unstructured.Unstructured).Object
-
 	if assertArray.Match != nil {
-		if err := testutils.IsSubset(assertArray.Match, unstructuredObj, "/", testutils.DefaultStrategyFactory()); err != nil {
+		expected, _ := runtime.DefaultUnstructuredConverter.ToUnstructured(assertArray.Match)
+		actual, _ := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
+		if err := testutils.IsSubset(expected, actual, "/", testutils.DefaultStrategyFactory()); err != nil {
 			return false
 		}
 	}
