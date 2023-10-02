@@ -398,6 +398,59 @@ func TestPopulateObjectsByFileName(t *testing.T) {
 	}
 }
 
+func TestPathMatches(t *testing.T) {
+	tests := []struct {
+		name     string
+		pattern  string
+		path     string
+		expected bool
+	}{
+		{
+			name:     "Exact match",
+			pattern:  "/api/v1/users",
+			path:     "/api/v1/users",
+			expected: true,
+		},
+		{
+			name:     "Wildcard at end matches",
+			pattern:  "/api/v1/*",
+			path:     "/api/v1/users",
+			expected: true,
+		},
+		{
+			name:     "Multiple wildcards match",
+			pattern:  "/api/*/users/*",
+			path:     "/api/v1/users/1234",
+			expected: true,
+		},
+		{
+			name:     "Wildcard in middle doesn't match",
+			pattern:  "/api/*/users",
+			path:     "/api/v1/admins",
+			expected: false,
+		},
+		{
+			name:     "Mismatch at the end",
+			pattern:  "/api/v1/users",
+			path:     "/api/v1/users/extra",
+			expected: false,
+		},
+		{
+			name:     "Pattern with trailing slash",
+			pattern:  "/api/v1/users/",
+			path:     "/api/v1/users",
+			expected: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := pathMatches(test.pattern, test.path)
+			assert.Equal(t, test.expected, result)
+		})
+	}
+}
+
 func TestMetaTypeMatches(t *testing.T) {
 	tests := []struct {
 		name         string
