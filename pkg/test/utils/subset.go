@@ -8,12 +8,12 @@ import (
 type ArrayComparisonStrategyFactory = func(path string) ArrayComparisonStrategy
 type ArrayComparisonStrategy = func(expectedData, actualData interface{}) error
 
-func defaultStrategyFactory() ArrayComparisonStrategyFactory {
+func DefaultStrategyFactory() ArrayComparisonStrategyFactory {
 	return alwaysExact
 }
 
 func alwaysExact(path string) ArrayComparisonStrategy {
-	return StrategyExact(path, defaultStrategyFactory())
+	return StrategyExact(path, DefaultStrategyFactory())
 }
 
 // SubsetError is an error type used by IsSubset for tracking the path in the struct.
@@ -61,7 +61,7 @@ func IsSubset(expected, actual interface{}, currentPath string, strategyFactory 
 	switch reflect.TypeOf(expected).Kind() {
 	case reflect.Slice:
 		if strategyFactory == nil {
-			strategyFactory = defaultStrategyFactory()
+			strategyFactory = DefaultStrategyFactory()
 		}
 		strategy := strategyFactory(currentPath)
 

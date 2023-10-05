@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	wildcard "github.com/IGLOU-EU/go-wildcard"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -426,13 +427,35 @@ func (s *Step) CheckResourceAbsent(expected runtime.Object, namespace string) er
 	return fmt.Errorf("resource %s %s (and %d other resources) matched error assertion", unexpectedObjects[0].GroupVersionKind(), unexpectedObjects[0].GetName(), len(unexpectedObjects)-1)
 }
 
+// pathMatches checks if the given path matches the pattern.
+func pathMatches(pattern, path string) bool {
+	return wildcard.Match(strings.TrimSuffix(pattern, "/"), path)
+}
+
+func metaTypeMatches(assertArray harness.AssertArray, obj client.Object) bool {
+	if assertArray.Match != nil {
+		expected, err := runtime.DefaultUnstructuredConverter.ToUnstructured(assertArray.Match)
+		if err != nil {
+			return false
+		}
+		actual, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
+		if err != nil {
+			return false
+		}
+		if err := testutils.IsSubset(expected, actual, "/", testutils.DefaultStrategyFactory()); err != nil {
+			return false
+		}
+	}
+	return true
+}
+
 // Build StrategyFactory for IsSubset
 func NewStrategyFactory(a asserts) func(path string) testutils.ArrayComparisonStrategy {
 	var strategyFactory func(path string) testutils.ArrayComparisonStrategy
 	recursiveStrategyFactory := func(path string) testutils.ArrayComparisonStrategy {
 		if a.options != nil && len(a.options.AssertArray) > 0 {
 			for _, assertArr := range a.options.AssertArray {
-				if assertArr.Path == path {
+				if pathMatches(assertArr.Path, path) && metaTypeMatches(assertArr, a.object) {
 					switch assertArr.Strategy {
 					case harness.StrategyExact:
 						return testutils.StrategyExact(path, strategyFactory)
