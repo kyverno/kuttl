@@ -1,0 +1,119 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.9.2
+  creationTimestamp: null
+  name: testasserts.kuttl.dev
+spec:
+  group: kuttl.dev
+  names:
+    kind: TestAssert
+    listKind: TestAssertList
+    plural: testasserts
+    singular: testassert
+  scope: Namespaced
+  versions:
+  - name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: TestAssert represents the settings needed to verify the result
+          of a test step.
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          collectors:
+            description: Collectors is a set of pod log collectors fired on an assert
+              failure
+            items:
+              description: TestCollector are post assert / error commands that allow
+                for the collection of information sent to the test log. Type can be
+                pod, command or event.  For backward compatibility, pod is default
+                and doesn't need to be specified For pod, At least one of `pod` or
+                `selector` is required. For command, Command must be specified and
+                Type can be == "command" but no other fields are valid For event,
+                Type must be == "events" and Namespace and Name can be specified,
+                if no ns or name, the default events are provided.  If no name, than
+                all events for that ns are provided.
+              properties:
+                command:
+                  description: Cmd is a command to run for collection.  It requires
+                    an empty Type or Type=command
+                  type: string
+                container:
+                  description: Container in pod to get logs from else --all-containers
+                    is used.
+                  type: string
+                namespace:
+                  description: namespace to use. The current test namespace will be
+                    used by default.
+                  type: string
+                pod:
+                  description: The pod name to access logs.
+                  type: string
+                selector:
+                  description: Selector is a label query to select pod.
+                  type: string
+                tail:
+                  description: Tail is the number of last lines to collect from pods.
+                    If omitted or zero, then the default is 10 if you use a selector,
+                    or -1 (all) if you use a pod name. This matches default behavior
+                    of `kubectl logs`.
+                  type: integer
+                type:
+                  description: Type is a collector type which is pod, command or events
+                    command is default type if command field is not empty misconfiguration
+                    will lead to warning message in the logs
+                  type: string
+              type: object
+            type: array
+          commands:
+            description: Commands is a set of commands to be run as assertions for
+              the current step
+            items:
+              description: TestAssertCommand an assertion based on the result of the
+                execution of a command
+              properties:
+                command:
+                  description: The command and argument to run as a string.
+                  type: string
+                namespaced:
+                  description: If set, the `--namespace` flag will be appended to
+                    the command with the namespace to use.
+                  type: boolean
+                script:
+                  description: Ability to run a shell script from TestStep (without
+                    a script file) namespaced and command should not be used with
+                    script.  namespaced is ignored and command is an error. env expansion
+                    is depended upon the shell but ENV is passed to the runtime env.
+                  type: string
+                skipLogOutput:
+                  description: If set, the output from the command is NOT logged.  Useful
+                    for sensitive logs or to reduce noise.
+                  type: boolean
+              required:
+              - command
+              - namespaced
+              - script
+              - skipLogOutput
+              type: object
+            type: array
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          timeout:
+            description: Override the default timeout of 30 seconds (in seconds).
+            type: integer
+        required:
+        - timeout
+        type: object
+    served: true
+    storage: true

@@ -17,5 +17,4 @@ limitations under the License.
 // +k8s:openapi-gen=false
 // +k8s:deepcopy-gen=package
 // +groupName=kuttl.dev
-// +kubebuilder:skip
 package v1beta1
