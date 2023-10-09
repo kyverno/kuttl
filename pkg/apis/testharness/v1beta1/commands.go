@@ -11,12 +11,12 @@ func (c *CommandOutput) ValidateCommandOutput(stdoutOutput, stderrOutput strings
 	var errs []string
 
 	if c.Stdout != nil {
-		if err := c.Stdout.validateOutput("stdout", stdoutOutput.String()); err != nil {
+		if err := c.Stdout.ValidateOutput("stdout", stdoutOutput.String()); err != nil {
 			errs = append(errs, err.Error())
 		}
 	}
 	if c.Stderr != nil {
-		if err := c.Stderr.validateOutput("stderr", stderrOutput.String()); err != nil {
+		if err := c.Stderr.ValidateOutput("stderr", stderrOutput.String()); err != nil {
 			errs = append(errs, err.Error())
 		}
 	}
@@ -26,7 +26,7 @@ func (c *CommandOutput) ValidateCommandOutput(stdoutOutput, stderrOutput strings
 	return nil
 }
 
-func (e *ExpectedOutput) validateOutput(outputType string, actualValue string) error {
+func (e *ExpectedOutput) ValidateOutput(outputType string, actualValue string) error {
 	expectedValue := e.ExpectedValue
 	matchType := e.MatchType
 	if matchType == "" {

@@ -37,6 +37,25 @@ spec:
                   type: string
                 shouldFail:
                   type: boolean
+                warnings:
+                  items:
+                    description: ExpectedOutput defines the criteria that command
+                      output should meet.
+                    properties:
+                      expected:
+                        description: Value is the expected value or pattern that should
+                          be matched against the command's output.
+                        type: string
+                      match:
+                        description: MatchType is the type of match that should be
+                          applied for validation. This could be "Equals", "Contains",
+                          or "Wildcard".
+                        type: string
+                    required:
+                    - expected
+                    - match
+                    type: object
+                  type: array
               type: object
             type: array
           assert:

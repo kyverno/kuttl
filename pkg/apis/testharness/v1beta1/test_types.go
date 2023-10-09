@@ -102,8 +102,9 @@ type TestSuite struct {
 
 // Apply holds infos for an apply statement
 type Apply struct {
-	File       string `json:"file,omitempty"`
-	ShouldFail bool   `json:"shouldFail,omitempty"`
+	File       string            `json:"file,omitempty"`
+	ShouldFail bool              `json:"shouldFail,omitempty"`
+	Warnings   *[]ExpectedOutput `json:"warnings,omitempty"`
 }
 
 // UnmarshalJSON implements the json.Unmarshaller interface.
@@ -113,14 +114,16 @@ func (apply *Apply) UnmarshalJSON(value []byte) error {
 		return json.Unmarshal(value, &apply.File)
 	}
 	data := struct {
-		File       string `json:"file,omitempty"`
-		ShouldFail bool   `json:"shouldFail,omitempty"`
+		File       string            `json:"file,omitempty"`
+		ShouldFail bool              `json:"shouldFail,omitempty"`
+		Warnings   *[]ExpectedOutput `json:"warnings,omitempty"`
 	}{}
 	if err := json.Unmarshal(value, &data); err != nil {
 		return err
 	}
 	apply.File = data.File
 	apply.ShouldFail = data.ShouldFail
+	apply.Warnings = data.Warnings
 	return nil
 }
 
