@@ -94,7 +94,7 @@ ifneq ($(shell go list -f '{{.Version}}' -m sigs.k8s.io/controller-tools), $(she
 	go install sigs.k8s.io/controller-tools/cmd/controller-gen@$$(go list -f '{{.Version}}' -m sigs.k8s.io/controller-tools)
 	go mod tidy
 endif
-	controller-gen crd paths=./pkg/apis/... output:crd:dir=config/crds output:stdout
+	controller-gen crd paths=./pkg/apis/... output:crd:dir=config/crd/bases output:stdout
 	./hack/update_codegen.sh
 
 

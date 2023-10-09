@@ -25,7 +25,7 @@ const (
 
 // Create embedded struct to implement custom DeepCopyInto method
 type RestConfig struct {
-	RC *rest.Config
+	RC *rest.Config `json:"-"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
