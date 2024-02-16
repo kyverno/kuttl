@@ -1,41 +1,11 @@
 # KYVERNO-KUTTL
 
-> **Note**
-> This is Kyverno's "official" fork of the kuttl project for internal use. It is not intended for wide usage. For the official kuttl project, please see the links below.
+:warning: :warning: :warning: :warning: :warning: :warning: :warning: :warning: :warning: :warning:
 
-<img src="https://kuttl.dev/images/kuttl-horizontal-logo.png" width="256">
+**This project is no longer maintained!**
 
+The kyverno org does not use kuttl anymore and switched to [chainsaw](https://github.com/kyverno/chainsaw).
 
-KUbernetes Test TooL (KUTTL) provides a declarative approach to test Kubernetes Operators.
+If you are looking for a tool similar to kuttl, we encourage you to give [chainsaw](https://github.com/kyverno/chainsaw) a try. In any case you should avoid using this fork at all cost.
 
-KUTTL is designed for testing operators, however it can declaratively test any kubernetes objects.
-
-## Getting Started
-
-Please refer to the [getting started guide](https://kuttl.dev/docs/) documentation.
-
-## Resources
-
-Initially Built under the KUDO project, we continue to use that channel for KUTTL.
-
-* Slack Channel: [#kudo](https://kubernetes.slack.com/archives/CG3HTFCMV)
-* Google Group: [kudobuilder@googlegroups.com](https://groups.google.com/forum/#!forum/kudobuilder)
-
-## Community Meetings
-
-We have open community meetings every 2nd and 4th Wednesday of the month at 9:00 a.m. PST. (17:00 UTC)
-
-* Agenda and Notes: https://docs.google.com/document/d/1UqgtCMUHSsOohZYF8K7zX8WcErttuMSx7NbvksIbZgg
-* Zoom Meeting: https://d2iq.zoom.us/j/443128842
-
-## Community, Events, Discussion, Contribution, and Support
-
-Learn more on how to engage with the KUDO community on the [community page](https://kudo.dev/community/).
-
-## Contributions
-
-Please read the [contributing guide](https://github.com/kudobuilder/kuttl/blob/main/CONTRIBUTING.md) for details around:
-
-1. Code of Conduct
-1. Code Culture
-1. Details on how to contribute
+:warning: :warning: :warning: :warning: :warning: :warning: :warning: :warning: :warning: :warning:
