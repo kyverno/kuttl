@@ -34,6 +34,7 @@ var fileNameRegex = regexp.MustCompile(`^(?:\d+-)?([^-\.]+)(-[^\.]+)?(?:\.yaml)?
 type apply struct {
 	object     client.Object
 	shouldFail bool
+	warnings   *[]harness.ExpectedOutput
 }
 
 type asserts struct {
@@ -250,7 +251,7 @@ func (s *Step) Create(test *testing.T, namespace string) []error {
 
 	for _, apply := range s.Apply {
 		err := doApply(test, s.SkipDelete, s.Logger, s.Timeout, dClient, cl, apply.object, namespace)
-		if err != nil && !apply.shouldFail {
+		if err != nil && !apply.shouldFail && !expectedWarnings(err.Error(), apply.warnings) {
 			errs = append(errs, err)
 		}
 		// if there was no error but we expected one
@@ -261,6 +262,19 @@ func (s *Step) Create(test *testing.T, namespace string) []error {
 	}
 
 	return errs
+}
+
+func expectedWarnings(actualWarning string, warnings *[]harness.ExpectedOutput) bool {
+	if warnings == nil {
+		return false
+	}
+
+	for _, warning := range *warnings {
+		if err := warning.ValidateOutput("", actualWarning); err != nil {
+			return false
+		}
+	}
+	return true
 }
 
 // GetTimeout gets the timeout defined for the test step.
@@ -649,7 +663,7 @@ func (s *Step) LoadYAML(file string) error {
 				return fmt.Errorf("step %q apply path %s: %w", s.Name, exApply, err)
 			}
 			for _, a := range aa {
-				applies = append(applies, apply{object: a, shouldFail: applyPath.ShouldFail})
+				applies = append(applies, apply{object: a, shouldFail: applyPath.ShouldFail, warnings: applyPath.Warnings})
 			}
 		}
 		// process configured step asserts
